@@ -1,0 +1,396 @@
+/* styles.css — ADD-E Dashboard */
+
+:root {
+  --accent:      #1D9E75;
+  --accent-bg:   #E1F5EE;
+  --accent-mid:  #9FE1CB;
+  --accent-text: #085041;
+  --hist-active: #80B800;       /* Grün wie in Screenshots */
+  --white:       #ffffff;
+  --card-bg:     #FFE500;
+  --card-border: #E6CE00;
+  --text-primary:   #1a1a1a;
+  --text-secondary: #444444;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--accent-bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px 10px;
+  transition: background .4s;
+}
+
+#app {
+  width: 100%;
+  max-width: 440px;
+  padding-bottom: 80px;
+}
+
+/* ── Header ── */
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--accent-mid);
+  margin-bottom: 14px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  background: var(--white);
+  color: var(--accent-text);
+  border: 1px solid var(--accent-mid);
+}
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transition: background .3s; }
+.dot.dis  { background: #E24B4A; }
+.dot.scan { background: #EF9F27; }
+
+.ctrl { display: flex; align-items: center; gap: 10px; }
+
+.tbtn {
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer; padding: 0; flex-shrink: 0;
+}
+.tbtn.on { border-color: var(--accent-text); }
+
+.lbtn {
+  font-size: 12px; padding: 4px 9px; cursor: pointer;
+  background: var(--white);
+  border: 1px solid var(--accent-mid);
+  border-radius: var(--radius-md);
+  color: var(--accent-text);
+  font-family: inherit;
+}
+
+/* ── Karten-Grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 14px 14px 12px;
+  border: 1px solid var(--card-border);
+}
+
+.clabel {
+  font-size: 11px;
+  color: #444;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.cval {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 52px;
+  font-weight: 900;
+  color: #111111;
+  line-height: 1;
+}
+.cval.hi { color: #085041; }
+.cval.sm { font-size: 34px; font-weight: 800; }
+.cval.xs { font-size: 24px; font-weight: 700; }
+
+.cunit {
+  font-size: 13px;
+  color: #555;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* ── Akkubalken ── */
+.bbar-wrap {
+  margin-top: 12px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 3px; height: 8px;
+  overflow: hidden;
+}
+.bbar {
+  height: 100%; border-radius: 3px;
+  background: var(--accent);
+  transition: width 1.1s, background .5s;
+}
+
+/* ── Bottom Navigation ── */
+.bnav {
+  display: flex;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  margin-top: 16px;
+  border: 1px solid var(--accent-mid);
+  overflow: hidden;
+  width: 100%;
+}
+
+.nbtn {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 4px;
+  background: transparent; border: none;
+  cursor: pointer; font-size: 12px;
+  color: var(--accent-text);
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background .2s, color .2s;
+  opacity: .65;
+}
+.nbtn.on { background: var(--accent); color: #fff; opacity: 1; font-weight: 600; }
+
+/* ── Verbinden-Button ── */
+.dbtn {
+  font-size: 13px; color: var(--accent-text);
+  background: var(--white);
+  border: 1px solid var(--accent-mid);
+  border-radius: var(--radius-md);
+  padding: 8px 20px; cursor: pointer;
+  display: block; margin: 8px auto 0;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+/* ── Verlauf: Tab-Bar ── */
+.hist-tabs {
+  display: flex;
+  background: var(--white);
+  border: 1px solid #ccc;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.htab {
+  flex: 1;
+  padding: 12px 4px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  font-family: inherit;
+  transition: background .2s, color .2s;
+}
+.htab:last-child { border-right: none; }
+.htab.on {
+  background: var(--hist-active);
+  color: #fff;
+}
+.htab.gesamt { flex: 1.8; font-size: 13px; }
+
+/* ── Verlauf: Navigationszeile ── */
+.hist-nav {
+  display: flex;
+  align-items: center;
+  background: var(--white);
+  border: 1px solid #ccc;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 12px;
+  height: 46px;
+}
+
+.hnav-btn {
+  width: 44px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  color: #888;
+  flex-shrink: 0;
+}
+.hnav-btn:last-of-type {
+  border-right: none;
+  border-left: 1px solid #ccc;
+}
+
+.hnav-label {
+  flex: 1;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.hnav-today {
+  padding: 0 14px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-left: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 13px;
+  color: #888;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+/* ── Verlauf: Inhalt ── */
+#hist-content {
+  margin-bottom: 12px;
+  min-height: 80px;
+}
+
+.hist-row {
+  background: var(--white);
+  border: 1px solid #ddd;
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.hist-row-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.hist-row-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.hist-row-dist {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: #111;
+}
+
+.hist-row-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.hist-stat {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.hist-stat b {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #222;
+}
+
+.hist-empty {
+  text-align: center;
+  padding: 30px 0;
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* Aggregat-Karte (Woche/Monat/Jahr/Gesamt) */
+.hist-agg {
+  background: var(--white);
+  border: 1px solid #ddd;
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+.hist-agg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.hist-agg-item {
+  text-align: center;
+  padding: 10px 6px;
+  background: #f8f8f8;
+  border-radius: var(--radius-md);
+}
+
+.hist-agg-val {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  color: #111;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.hist-agg-lbl {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* ── Verlauf: Aktionszeile ── */
+.hist-actions {
+  display: flex;
+  background: var(--white);
+  border: 1px solid #ccc;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.hact-btn {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #ccc;
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+.hact-btn:last-child { border-right: none; }
+.hact-btn:active { background: #f0f0f0; }
+
+/* ── Verlauf: Karten ── */
+.scard {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 13px 15px; margin-bottom: 10px;
+  border: 1px solid var(--accent-mid);
+}
+.shdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sdate { font-size: 12px; color: var(--accent-text); opacity: .8; }
+.sdist { font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.sstats { display: flex; gap: 14px; flex-wrap: wrap; }
+.sstat { font-size: 12px; color: var(--text-secondary); }
+.sstat b { color: var(--text-primary); font-weight: 700; }
+
+.sect-title {
+  font-size: 10px; color: var(--accent-text);
+  letter-spacing: .08em; text-transform: uppercase;
+  margin-bottom: 11px; opacity: .7;
+}

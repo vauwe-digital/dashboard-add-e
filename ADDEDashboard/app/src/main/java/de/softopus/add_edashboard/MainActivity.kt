@@ -3,11 +3,17 @@
 // Licensed under GNU General Public License v3.0
 // https://github.com/vauwe-digital/dashboard-add-e.git
 //
+
 package de.softopus.add_edashboard
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -22,8 +28,12 @@ class MainActivity : AppCompatActivity() {
     internal lateinit var gpsManager: GpsManager
     internal var webViewReady = false
 
+    private var syncHandler: Handler? = null
+    private var syncRunnable: Runnable? = null
+
     companion object {
         private const val REQUEST_PERMISSIONS = 100
+        const val REQUEST_IMPORT_CSV          = 101
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT,
@@ -32,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -53,7 +64,10 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 android.util.Log.d("MainActivity", "WebView fertig geladen")
                 webViewReady = true
-                if (hasPermissions()) gpsManager.start()
+                if (hasPermissions()) {
+                    gpsManager.start()
+                    startForegroundTracking()
+                }
             }
         }
 
@@ -64,6 +78,70 @@ class MainActivity : AppCompatActivity() {
         gpsManager = GpsManager(this) { json -> sendToJS("updateGps", json) }
 
         checkAndRequestPermissions()
+    }
+
+    // ── Foreground Service ────────────────────────────────────────────────────
+
+    private fun startForegroundTracking() {
+        if (!TrackingService.isRunning) {
+            startForegroundService(Intent(this, TrackingService::class.java))
+        }
+    }
+
+    // ── Service-Sync ──────────────────────────────────────────────────────────
+
+    private fun startServiceSync() {
+        stopServiceSync()
+        syncHandler = Handler(Looper.getMainLooper())
+        syncRunnable = object : Runnable {
+            override fun run() {
+                if (webViewReady && TrackingService.isRunning) {
+                    val sec  = TrackingService.currentSeconds
+                    val spd  = TrackingService.currentSpeed
+                    val dist = TrackingService.currentDistance
+                    val json = "{\"speed\":${"%.1f".format(java.util.Locale.US, spd)}," +
+                            "\"distance\":${"%.2f".format(java.util.Locale.US, dist)}," +
+                            "\"seconds\":$sec}"
+                    sendToJS("updateFromService", json)
+                }
+                syncHandler?.postDelayed(this, 1000)
+            }
+        }
+        syncHandler?.postDelayed(syncRunnable!!, 1000)
+    }
+
+    private fun stopServiceSync() {
+        syncRunnable?.let { syncHandler?.removeCallbacks(it) }
+        syncHandler = null
+        syncRunnable = null
+    }
+
+    // ── CSV-Import: Dateiauswahl-Ergebnis ─────────────────────────────────────
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_IMPORT_CSV && resultCode == Activity.RESULT_OK) {
+            val uri = data?.data ?: return
+            try {
+                val csv = contentResolver.openInputStream(uri)
+                    ?.bufferedReader()
+                    ?.readText() ?: return
+                android.util.Log.d("MainActivity", "CSV importiert: ${csv.length} Zeichen")
+
+                // Sonderzeichen escapen für JavaScript-String
+                val escaped = csv
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "")
+
+                sendToJS("importCsvData", "\"$escaped\"")
+
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Import-Fehler: ${e.message}")
+                sendToJS("showToast", "\"Import-Fehler: ${e.message}\"")
+            }
+        }
     }
 
     // ── JavaScript aufrufen ───────────────────────────────────────────────────
@@ -82,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
 
+    @SuppressLint("InlinedApi")
     internal fun checkAndRequestPermissions() {
         val missing = REQUIRED_PERMISSIONS.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -99,7 +178,10 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_PERMISSIONS) {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                if (webViewReady) gpsManager.start()
+                if (webViewReady) {
+                    gpsManager.start()
+                    startForegroundTracking()
+                }
             } else {
                 sendToJS("onPermissionDenied", "{}")
             }
@@ -110,24 +192,32 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (hasPermissions() && webViewReady) gpsManager.start()
+        if (hasPermissions() && webViewReady) {
+            gpsManager.start()
+            startForegroundTracking()
+        }
+        startServiceSync()
     }
 
     override fun onPause() {
         super.onPause()
         gpsManager.stop()
+        stopServiceSync()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         bleManager.disconnect()
         gpsManager.stop()
+        stopServiceSync()
+        stopService(Intent(this, TrackingService::class.java))
         webView.destroy()
     }
 }
 
 // ── Bridge: JavaScript → Kotlin ───────────────────────────────────────────────
 
+@Suppress("unused")
 class Bridge(private val context: MainActivity) {
 
     @JavascriptInterface
@@ -157,12 +247,23 @@ class Bridge(private val context: MainActivity) {
     }
 
     @JavascriptInterface
+    fun importCsv() {
+        android.util.Log.d("MainActivity", "importCsv aufgerufen")
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        context.startActivityForResult(
+            Intent.createChooser(intent, "CSV-Datei auswählen"),
+            MainActivity.REQUEST_IMPORT_CSV
+        )
+    }
+
+    @JavascriptInterface
     fun exportCsv(signal: String) {
         android.util.Log.d("MainActivity", "exportCsv Signal: $signal")
-        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        val handler = Handler(Looper.getMainLooper())
         handler.post {
-            android.util.Log.d("MainActivity", "Handler läuft")
-
             // Zuerst Label lesen
             context.webView.evaluateJavascript(
                 "localStorage.getItem('adde_csv_label')"
@@ -179,14 +280,10 @@ class Bridge(private val context: MainActivity) {
                         android.util.Log.e("MainActivity", "CSV leer")
                         return@evaluateJavascript
                     }
-
                     val csvClean = csv.removeSurrounding("\"")
                         .replace("\\n", "\n")
                         .replace("\\\"", "\"")
                         .replace("\\\\", "\\")
-
-                    android.util.Log.d("MainActivity",
-                        "CSV erste Zeile: ${csvClean.lines().firstOrNull()}")
 
                     try {
                         val fileName = "adde_${label}_${System.currentTimeMillis()}.csv"
@@ -199,13 +296,10 @@ class Bridge(private val context: MainActivity) {
                         android.util.Log.d("MainActivity",
                             "CSV gespeichert: ${file.absolutePath} (${file.length()} bytes)")
 
-                        // localStorage bereinigen
                         context.webView.evaluateJavascript(
                             "localStorage.removeItem('adde_csv_export')", null)
                         context.webView.evaluateJavascript(
                             "localStorage.removeItem('adde_csv_label')", null)
-
-                        // Erfolg anzeigen
                         context.webView.evaluateJavascript(
                             "window.showToast('✓ Gespeichert: $fileName')", null)
 

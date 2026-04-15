@@ -1,5 +1,3 @@
-README
-
 # ADD-E Dashboard
 
 Android app for the ADD-E bicycle retrofit system.  
@@ -71,32 +69,4 @@ in this repository. Contact ADD-E GmbH for access.
 - iOS-Version via Capacitor.js
 - NDA und offizielle BLE-Dokumentation von ADD-E
 
-id: 0b07818e4be943ff9294e57d87d93f56
-parent_id: 32ce0f6cda404716bd547b6786d87359
-created_time: 2026-04-09T13:33:01.495Z
-updated_time: 2026-04-14T09:42:00.984Z
-is_conflict: 0
-latitude: 0.00000000
-longitude: 0.00000000
-altitude: 0.0000
-author: 
-source_url: 
-is_todo: 0
-todo_due: 0
-todo_completed: 0
-source: joplin-desktop
-source_application: net.cozic.joplin-desktop
-application_data: 
-order: 1775746864052
-user_created_time: 2026-04-09T13:33:01.495Z
-user_updated_time: 2026-04-14T09:30:00.279Z
-encryption_cipher_text: 
-encryption_applied: 0
-markup_language: 1
-is_shared: 0
-share_id: 
-conflict_original_id: 
-master_key_id: 
-user_data: 
-deleted_time: 1776159720984
-type_: 1
+&nbsp;

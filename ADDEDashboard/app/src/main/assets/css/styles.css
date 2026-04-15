@@ -5,7 +5,6 @@
   --accent-bg:   #E1F5EE;
   --accent-mid:  #9FE1CB;
   --accent-text: #085041;
-  --hist-active: #80B800;       /* Grün wie in Screenshots */
   --white:       #ffffff;
   --card-bg:     #FFE500;
   --card-border: #E6CE00;
@@ -121,6 +120,63 @@ body {
   font-weight: 600;
 }
 
+/* ── Start / Pause / Stop Buttons ── */
+.ride-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ride-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 8px;
+  border-radius: var(--radius-lg);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  transition: opacity .2s, transform .1s;
+}
+
+.ride-btn:active { transform: scale(0.97); }
+
+.ride-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ride-btn.start {
+  background: #1D9E75;
+  color: #fff;
+}
+
+.ride-btn.pause {
+  background: #EF9F27;
+  color: #fff;
+}
+
+.ride-btn.stop {
+  background: #E24B4A;
+  color: #fff;
+}
+
+/* ── Ride-Status ── */
+.ride-status {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-text);
+  min-height: 18px;
+  margin-bottom: 8px;
+  letter-spacing: .04em;
+}
+
 /* ── Akkubalken ── */
 .bbar-wrap {
   margin-top: 12px;
@@ -168,12 +224,12 @@ body {
   border: 1px solid var(--accent-mid);
   border-radius: var(--radius-md);
   padding: 8px 20px; cursor: pointer;
-  display: block; margin: 8px auto 0;
+  display: block; margin: 4px auto 0;
   font-family: inherit;
   font-weight: 600;
 }
 
-/* ── Verlauf: Tab-Bar ── */
+/* ── Verlauf ── */
 .hist-tabs {
   display: flex;
   background: var(--white);
@@ -197,13 +253,9 @@ body {
   transition: background .2s, color .2s;
 }
 .htab:last-child { border-right: none; }
-.htab.on {
-  background: var(--hist-active);
-  color: #fff;
-}
+.htab.on { background: #80B800; color: #fff; }
 .htab.gesamt { flex: 1.8; font-size: 13px; }
 
-/* ── Verlauf: Navigationszeile ── */
 .hist-nav {
   display: flex;
   align-items: center;
@@ -216,141 +268,53 @@ body {
 }
 
 .hnav-btn {
-  width: 44px;
-  height: 100%;
-  background: transparent;
-  border: none;
+  width: 44px; height: 100%;
+  background: transparent; border: none;
   border-right: 1px solid #ccc;
-  cursor: pointer;
-  font-size: 14px;
-  color: #888;
+  cursor: pointer; font-size: 14px; color: #888;
   flex-shrink: 0;
 }
-.hnav-btn:last-of-type {
-  border-right: none;
-  border-left: 1px solid #ccc;
-}
+.hnav-btn:last-of-type { border-right: none; border-left: 1px solid #ccc; }
 
 .hnav-label {
-  flex: 1;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 600;
-  color: #222;
+  flex: 1; text-align: center;
+  font-size: 15px; font-weight: 600; color: #222;
 }
 
 .hnav-today {
-  padding: 0 14px;
-  height: 100%;
-  background: transparent;
-  border: none;
+  padding: 0 14px; height: 100%;
+  background: transparent; border: none;
   border-left: 1px solid #ccc;
-  cursor: pointer;
-  font-size: 13px;
-  color: #888;
-  font-family: inherit;
-  flex-shrink: 0;
+  cursor: pointer; font-size: 13px; color: #888;
+  font-family: inherit; flex-shrink: 0;
 }
 
-/* ── Verlauf: Inhalt ── */
-#hist-content {
-  margin-bottom: 12px;
-  min-height: 80px;
-}
+#hist-content { margin-bottom: 12px; min-height: 80px; }
 
 .hist-row {
   background: var(--white);
   border: 1px solid #ddd;
   border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  margin-bottom: 8px;
+  padding: 12px 14px; margin-bottom: 8px;
 }
+.hist-row-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.hist-row-date { font-size: 13px; font-weight: 600; color: #333; }
+.hist-row-dist { font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; color: #111; }
+.hist-row-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hist-stat { font-size: 11px; color: #666; line-height: 1.4; }
+.hist-stat b { display: block; font-size: 13px; font-weight: 700; color: #222; }
 
-.hist-row-hdr {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.hist-row-date {
-  font-size: 13px;
-  font-weight: 600;
-  color: #333;
-}
-
-.hist-row-dist {
-  font-size: 16px;
-  font-weight: 700;
-  font-family: 'Courier New', monospace;
-  color: #111;
-}
-
-.hist-row-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.hist-stat {
-  font-size: 11px;
-  color: #666;
-  line-height: 1.4;
-}
-
-.hist-stat b {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  color: #222;
-}
-
-.hist-empty {
-  text-align: center;
-  padding: 30px 0;
-  font-size: 13px;
-  color: #aaa;
-}
-
-/* Aggregat-Karte (Woche/Monat/Jahr/Gesamt) */
 .hist-agg {
   background: var(--white);
   border: 1px solid #ddd;
   border-radius: var(--radius-lg);
-  padding: 14px;
-  margin-bottom: 8px;
+  padding: 14px; margin-bottom: 8px;
 }
+.hist-agg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.hist-agg-item { text-align: center; padding: 10px 6px; background: #f8f8f8; border-radius: var(--radius-md); }
+.hist-agg-val { font-size: 22px; font-weight: 800; font-family: 'Courier New', monospace; color: #111; line-height: 1; margin-bottom: 3px; }
+.hist-agg-lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: .05em; }
 
-.hist-agg-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.hist-agg-item {
-  text-align: center;
-  padding: 10px 6px;
-  background: #f8f8f8;
-  border-radius: var(--radius-md);
-}
-
-.hist-agg-val {
-  font-size: 22px;
-  font-weight: 800;
-  font-family: 'Courier New', monospace;
-  color: #111;
-  line-height: 1;
-  margin-bottom: 3px;
-}
-
-.hist-agg-lbl {
-  font-size: 10px;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-/* ── Verlauf: Aktionszeile ── */
 .hist-actions {
   display: flex;
   background: var(--white);
@@ -358,37 +322,23 @@ body {
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
-
 .hact-btn {
-  flex: 1;
-  padding: 12px;
-  background: transparent;
-  border: none;
+  flex: 1; padding: 12px;
+  background: transparent; border: none;
   border-right: 1px solid #ccc;
-  cursor: pointer;
-  color: #888;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  cursor: pointer; color: #888;
+  display: flex; align-items: center; justify-content: center;
   transition: background .15s;
 }
 .hact-btn:last-child { border-right: none; }
 .hact-btn:active { background: #f0f0f0; }
 
-/* ── Verlauf: Karten ── */
 .scard {
   background: var(--white);
   border-radius: var(--radius-lg);
   padding: 13px 15px; margin-bottom: 10px;
   border: 1px solid var(--accent-mid);
 }
-.shdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.sdate { font-size: 12px; color: var(--accent-text); opacity: .8; }
-.sdist { font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: var(--text-primary); }
-.sstats { display: flex; gap: 14px; flex-wrap: wrap; }
-.sstat { font-size: 12px; color: var(--text-secondary); }
-.sstat b { color: var(--text-primary); font-weight: 700; }
-
 .sect-title {
   font-size: 10px; color: var(--accent-text);
   letter-spacing: .08em; text-transform: uppercase;

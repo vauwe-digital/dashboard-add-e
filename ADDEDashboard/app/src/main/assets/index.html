@@ -49,6 +49,29 @@
         <div class="cunit">h:mm:ss</div>
       </div>
     </div>
+
+    <!-- Start / Pause / Stop Buttons -->
+    <div class="ride-controls">
+      <button class="ride-btn start" id="btn-start" onclick="rideStart()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5,3 19,12 5,21"/>
+        </svg>
+        <span id="l-start">Start</span>
+      </button>
+      <button class="ride-btn pause" id="btn-pause" onclick="ridePause()" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+        </svg>
+        <span id="l-pause">Pause</span>
+      </button>
+      <button class="ride-btn stop" id="btn-stop" onclick="rideStop()" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="4" y="4" width="16" height="16"/>
+        </svg>
+        <span id="l-stop">Stop</span>
+      </button>
+    </div>
+
     <button class="dbtn" id="dbtn" data-status="disconnected" onclick="onBtnConnect()">Verbinden</button>
   </div>
 
@@ -106,16 +129,14 @@
   <!-- Screen 3: Verlauf -->
   <div id="scr-hist" style="display:none;">
 
-    <!-- Tab-Bar: T W M J Gesamt -->
     <div class="hist-tabs">
       <button class="htab on" id="ht-t" onclick="setHistTab('t',this)">T</button>
       <button class="htab"    id="ht-w" onclick="setHistTab('w',this)">W</button>
       <button class="htab"    id="ht-m" onclick="setHistTab('m',this)">M</button>
       <button class="htab"    id="ht-j" onclick="setHistTab('j',this)">J</button>
-      <button class="htab gesamt" id="ht-g" onclick="setHistTab('g',this)" id="ht-g">Gesamt</button>
+      <button class="htab gesamt" id="ht-g" onclick="setHistTab('g',this)">Gesamt</button>
     </div>
 
-    <!-- Navigationszeile -->
     <div class="hist-nav" id="hist-nav">
       <button class="hnav-btn" onclick="histNavPrev()">&#9664;</button>
       <div class="hnav-label" id="hnav-label">2026-04-12</div>
@@ -123,40 +144,37 @@
       <button class="hnav-today" onclick="histNavToday()" id="hnav-today">Heute</button>
     </div>
 
-    <!-- Inhalt -->
     <div id="hist-content"></div>
 
-    <!-- Aktionszeile -->
     <div class="hist-actions">
       <button class="hact-btn" onclick="histInfo()" title="Info">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-width="2.5"/>
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="8" stroke-width="2.5"/>
           <line x1="12" y1="11" x2="12" y2="16"/>
         </svg>
       </button>
       <button class="hact-btn" onclick="histExport()" title="Exportieren">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+          <path d="M12 3v12m0 0l-4-4m4 4l4-4"/>
+          <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
         </svg>
       </button>
-      <!-- NEU: Import-Button ⬆ -->
-      <!-- Import-Button ⬆ — Pfeil zeigt nach OBEN -->
       <button class="hact-btn" onclick="histImport()" title="Importieren">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="1.5">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M12 21V9m0 0l-4 4m4-4l4 4"/>
           <path d="M4 7v-2a2 2 0 012-2h12a2 2 0 012 2v2"/>
         </svg>
       </button>
-
-      <button class="hact-btn" onclick="histReport()" title="Bericht">
+      <button class="hact-btn" onclick="histReport()" title="Löschen">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/>
-          <line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/>
+          <rect x="4" y="2" width="16" height="20" rx="2"/>
+          <line x1="8" y1="7" x2="16" y2="7"/>
+          <line x1="8" y1="11" x2="16" y2="11"/>
+          <line x1="8" y1="15" x2="13" y2="15"/>
         </svg>
       </button>
     </div>
-
   </div>
 
   <!-- Navigation -->

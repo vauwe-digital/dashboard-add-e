@@ -47,6 +47,19 @@ Navigation über die Tab-Leiste am unteren Bildschirmrand: **▶ Live · ∑ Sta
 | Trittfrequenz | Pedalumdrehungen pro Minute *(in Vorb.)* | BLE |
 | Fahrzeit | Zeitdauer der aktuellen Fahrt | intern |
 
+**Fahrt-Steuerung:**
+
+| Button | Farbe | Funktion |
+|---|---|---|
+| ▶ Start | Grün | Neue Fahrt beginnen — alle Zähler auf 0 |
+| ⏸ Pause | Gelb | Fahrt unterbrechen — Zähler eingefroren |
+| ▶ Weiter | Grün | Nach Pause fortsetzen — Zähler läuft weiter |
+| ■ Stop | Rot | Sicherheitsabfrage Ja/Nein → Ja: Fahrt speichern und Zähler auf 0 zurücksetzen |
+
+> **Mehrere Touren pro Tag** möglich — nach jedem Stop können neue Fahrten gestartet werden. Alle Touren werden separat im Verlauf gespeichert.
+
+> **Mindestdistanz:** Fahrten unter 0.05 km werden nicht gespeichert.
+
 ### ∑ Stats-Screen
 
 | Anzeige | Beschreibung | Quelle |
@@ -158,7 +171,7 @@ Drei Farbvarianten über die Farbpunkte oben rechts wählbar. Die Auswahl wird g
 
 ---
 
-## 7. Testdaten
+## 6. Testdaten
 
 Im Verlauf-Screen erscheint der Button **⚙ Testdaten erstellen** wenn noch keine Fahrten gespeichert sind. Er generiert simulierte Fahrten vom 01.01.2025 bis heute mit realistischen Sommer/Winter-Mustern.
 
@@ -166,7 +179,7 @@ Im Verlauf-Screen erscheint der Button **⚙ Testdaten erstellen** wenn noch kei
 
 ---
 
-## 8. Hinweise
+## 7. Hinweise
 
 | Thema | Beschreibung |
 |---|---|

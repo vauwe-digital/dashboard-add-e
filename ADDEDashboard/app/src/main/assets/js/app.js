@@ -3,6 +3,7 @@
 // Licensed under GNU General Public License v3.0
 // https://github.com/vauwe-digital/dashboard-add-e.git
 
+
 // ── Texte DE / EN ────────────────────────────────────────────────────────────
 const LABELS = {
     de: {
@@ -12,18 +13,19 @@ const LABELS = {
         voltage:'Spannung', current:'Strom', remaining:'Verbleibend',
         conn:'Verbunden', disc:'Getrennt', scan:'Suche…',
         btnConn:'Verbinden', btnDisc:'Verbindung trennen',
+        btnCscConn:'Cadence verbinden', btnCscDisc:'Cadence trennen',
         noPermission:'Berechtigung fehlt',
         live:'▶ Live', stats:'∑ Stats', hist:'≡ Verlauf',
         today:'Heute', noData:'Keine Fahrten',
         rides:'Fahrten', distance:'Distanz', duration:'Fahrzeit',
         avgSpd:'Ø Geschw.', maxSpd:'Max Geschw.', battery:'Akku',
+        avgCad:'Ø Trittf.',
         start:'Start', pause:'Pause', stop:'Stop', resume:'Weiter',
-        statusReady:'Bereit', statusRiding:'Fahrt läuft…',
-        statusPaused:'Pausiert', statusSaved:'Fahrt gespeichert',
         stopTitle:'Fahrt beenden',
         stopText:'Fahrt wirklich beenden und speichern?',
         stopOk:'Ja', stopCancel:'Nein',
         stopMinDist:'Mindestdistanz 0.05 km nicht erreicht',
+        statusSaved:'Fahrt gespeichert',
         simBtn:'⚙ Testdaten erstellen',
         simTitle:'Testdaten erstellen',
         simText:'Fahrten 01.01.2025 – heute werden generiert. Vorhandene Daten werden überschrieben.',
@@ -34,7 +36,9 @@ const LABELS = {
         saved:'Fahrten gespeichert',
         importTitle:'CSV importieren',
         importText:'Die CSV-Datei wird mit vorhandenen Daten zusammengeführt. Duplikate werden übersprungen.',
-        importOk:'Importieren', importCancel:'Abbrechen'
+        importOk:'Importieren', importCancel:'Abbrechen',
+        btHint:'Bluetooth eingeschaltet?',
+        cscNotFound:'Kein Cadence-Sensor gefunden'
     },
     en: {
         spd:'Speed', dist:'Distance', cad:'Cadence', time:'Ride Time',
@@ -43,18 +47,19 @@ const LABELS = {
         voltage:'Voltage', current:'Current', remaining:'Remaining',
         conn:'Connected', disc:'Disconnected', scan:'Scanning…',
         btnConn:'Connect', btnDisc:'Disconnect',
+        btnCscConn:'Connect Cadence', btnCscDisc:'Disconnect Cadence',
         noPermission:'Permission denied',
         live:'▶ Live', stats:'∑ Stats', hist:'≡ History',
         today:'Today', noData:'No rides',
         rides:'Rides', distance:'Distance', duration:'Duration',
         avgSpd:'Avg Speed', maxSpd:'Max Speed', battery:'Battery',
+        avgCad:'Avg Cadence',
         start:'Start', pause:'Pause', stop:'Stop', resume:'Resume',
-        statusReady:'Ready', statusRiding:'Ride in progress…',
-        statusPaused:'Paused', statusSaved:'Ride saved',
         stopTitle:'End ride',
         stopText:'Really end and save this ride?',
         stopOk:'Yes', stopCancel:'No',
         stopMinDist:'Minimum distance 0.05 km not reached',
+        statusSaved:'Ride saved',
         simBtn:'⚙ Create test data',
         simTitle:'Create test data',
         simText:'Rides from 01.01.2025 to today will be generated. Existing data will be overwritten.',
@@ -65,7 +70,9 @@ const LABELS = {
         saved:'rides saved',
         importTitle:'Import CSV',
         importText:'The CSV file will be merged with existing data. Duplicates will be skipped.',
-        importOk:'Import', importCancel:'Cancel'
+        importOk:'Import', importCancel:'Cancel',
+        btHint:'Bluetooth turned on?',
+        cscNotFound:'No cadence sensor found'
     }
 };
 
@@ -77,12 +84,15 @@ function applyLabels() {
     set('l-spd', L.spd); set('l-dist', L.dist); set('l-cad', L.cad); set('l-time', L.time);
     set('l-avgspd', L.avgspd); set('l-totalkm', L.totalkm); set('l-maxspd', L.maxspd);
     set('l-clock', L.clock); set('l-bat', L.bat); set('l-bat2', L.bat2);
+    set('l-avgcad', getLang() === 'de' ? 'Ø Trittfrequenz' : 'Avg Cadence');
     set('l-voltage', L.voltage); set('l-current', L.current); set('l-remaining', L.remaining);
     set('nb-live', L.live); set('nb-stats', L.stats); set('nb-hist', L.hist);
     set('hnav-today', L.today);
     set('l-start', L.start); set('l-pause', L.pause); set('l-stop', L.stop);
     const dbtn = document.getElementById('dbtn');
     if (dbtn) dbtn.textContent = dbtn.dataset.status === 'connected' ? L.btnDisc : L.btnConn;
+    const cscbtn = document.getElementById('cscbtn');
+    if (cscbtn) cscbtn.textContent = cscbtn.dataset.status === 'connected' ? L.btnCscDisc : L.btnCscConn;
     const lbtn = document.getElementById('lbtn');
     if (lbtn) lbtn.textContent = getLang() === 'de' ? 'EN' : 'DE';
     updateRideUI();
@@ -100,62 +110,50 @@ let _rideSeconds  = 0;
 let _rideDist     = 0.0;
 let _rideMaxSpd   = 0.0;
 let _rideSpeeds   = [];
+let _rideCadences = [];
 let _rideStartBat = null;
 let _rideStartTime= null;
-window._rideTimer  = null;
+window._rideTimer   = null;
 window._lastSvcDist = null;
 
 function updateRideUI() {
-    const L = LABELS[getLang()];
-    const btnStart   = document.getElementById('btn-start');
-    const btnPause   = document.getElementById('btn-pause');
-    const btnStop    = document.getElementById('btn-stop');
-    const status     = document.getElementById('ride-status');
-    const startLabel = document.getElementById('l-start');
-    const pauseLabel = document.getElementById('l-pause');
+    const L        = LABELS[getLang()];
+    const btnStart = document.getElementById('btn-start');
+    const btnPause = document.getElementById('btn-pause');
+    const btnStop  = document.getElementById('btn-stop');
+    const startLbl = document.getElementById('l-start');
+    const pauseLbl = document.getElementById('l-pause');
     if (!btnStart) return;
-
     if (_rideState === 'idle') {
-        btnStart.disabled = false;
-        btnPause.disabled = true;
-        btnStop.disabled  = true;
-        if (startLabel) startLabel.textContent = L.start;
-        if (pauseLabel) pauseLabel.textContent = L.pause;
+        btnStart.disabled = false; btnPause.disabled = true; btnStop.disabled = true;
+        if (startLbl) startLbl.textContent = L.start;
+        if (pauseLbl) pauseLbl.textContent = L.pause;
     } else if (_rideState === 'running') {
-        btnStart.disabled = true;
-        btnPause.disabled = false;
-        btnStop.disabled  = false;
+        btnStart.disabled = true; btnPause.disabled = false; btnStop.disabled = false;
     } else if (_rideState === 'paused') {
-        btnStart.disabled = false;
-        btnPause.disabled = true;
-        btnStop.disabled  = false;
-        if (startLabel) startLabel.textContent = L.resume;
+        btnStart.disabled = false; btnPause.disabled = true; btnStop.disabled = false;
+        if (startLbl) startLbl.textContent = L.resume;
     }
 }
 
 window.rideStart = function() {
-    const L = LABELS[getLang()];
-
-    // Timer ZUERST stoppen
     stopRideTimer();
-
     if (_rideState === 'idle') {
-        // DANN Variablen zurücksetzen
         _rideSeconds        = 0;
         _rideDist           = 0.0;
         _rideMaxSpd         = 0.0;
         _rideSpeeds         = [];
+        _rideCadences       = [];   // Cadence-Liste zurücksetzen
         _rideStartBat       = window._currentBat || null;
         _rideStartTime      = new Date();
         window._lastSvcDist = null;
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-        set('v-spd',    '0.0');
-        set('v-dist',   '0.00');
-        set('v-time',   '00:00');
-        set('v-maxspd', '0.0');
-        set('v-avgspd', '0.0');
+        set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
+        set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
+        // Im idle-Block ergänzen:
+        const avgcadEl = document.getElementById('v-avgcad');
+        if (avgcadEl) avgcadEl.textContent = '--';
     }
-
     _rideState = 'running';
     startRideTimer();
     updateRideUI();
@@ -163,7 +161,7 @@ window.rideStart = function() {
 
 window.ridePause = function() {
     if (_rideState !== 'running') return;
-    _rideState          = 'paused';
+    _rideState = 'paused';
     window._lastSvcDist = null;
     stopRideTimer();
     updateRideUI();
@@ -182,18 +180,12 @@ window.rideStop = function() {
     showDialog(L.stopTitle, L.stopText, L.stopOk, '#E24B4A', L.stopCancel, () => {
         stopRideTimer();
         saveCurrentRide();
-        _rideState          = 'idle';
-        _rideSeconds        = 0;
-        _rideDist           = 0.0;
-        _rideMaxSpd         = 0.0;
-        _rideSpeeds         = [];
+        _rideState = 'idle'; _rideSeconds = 0; _rideDist = 0.0;
+        _rideMaxSpd = 0.0; _rideSpeeds = []; _rideCadences = [];
         window._lastSvcDist = null;
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-        set('v-spd', '0.0');
-        set('v-dist', '0.00');
-        set('v-time', '00:00');
-        set('v-maxspd', '0.0');
-        set('v-avgspd', '0.0');
+        set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
+        set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
         const sl = document.getElementById('l-start');
         if (sl) sl.textContent = L.start;
         updateRideUI();
@@ -206,6 +198,8 @@ function saveCurrentRide() {
     if (!_rideStartTime) return;
     const avgSpd = _rideSpeeds.length
         ? _rideSpeeds.reduce((a,v) => a+v, 0) / _rideSpeeds.length : 0;
+    const avgCad = _rideCadences.length
+        ? _rideCadences.reduce((a,v) => a+v, 0) / _rideCadences.length : 0;
     const ride = {
         id:           _rideStartTime.getTime(),
         date:         _rideStartTime.toISOString().slice(0,10),
@@ -215,6 +209,7 @@ function saveCurrentRide() {
         distance:     parseFloat(_rideDist.toFixed(2)),
         avgSpeed:     parseFloat(avgSpd.toFixed(1)),
         maxSpeed:     parseFloat(_rideMaxSpd.toFixed(1)),
+        avgCadence:   parseFloat(avgCad.toFixed(0)),   // Ø Trittfrequenz
         batteryStart: _rideStartBat,
         batteryEnd:   window._currentBat || null
     };
@@ -224,47 +219,45 @@ function saveCurrentRide() {
     localStorage.setItem('adde_rides', JSON.stringify(rides));
 }
 
-// ── GPS (direkt von GpsManager) ───────────────────────────────────────────────
+// ── GPS ───────────────────────────────────────────────────────────────────────
 window.updateGps = function(data) {
     const d = typeof data === 'string' ? JSON.parse(data) : data;
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    set('v-spd', d.speed.toFixed(1));
+    const el = document.getElementById('v-spd');
+    if (el) el.textContent = d.speed.toFixed(1);
 };
 
-// ── Service-Sync (Hintergrundbetrieb + Distanz) ───────────────────────────────
+// ── Service-Sync ──────────────────────────────────────────────────────────────
 window.updateFromService = function(data) {
     const d = typeof data === 'string' ? JSON.parse(data) : data;
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-
-    // Geschwindigkeit immer anzeigen
     set('v-spd', d.speed.toFixed(1));
-
     if (_rideState === 'running') {
-        // Distanz-Delta berechnen
         if (window._lastSvcDist == null) window._lastSvcDist = d.distance;
         const delta = Math.max(0, d.distance - window._lastSvcDist);
         window._lastSvcDist = d.distance;
         _rideDist += delta;
         set('v-dist', _rideDist.toFixed(2));
-
-        // Fahrzeit
-        if (d.seconds > _rideSeconds) {
-            _rideSeconds = d.seconds;
-            set('v-time', fmtTime(_rideSeconds));
-        }
-
-        // Maximum
-        if (d.speed > _rideMaxSpd) {
-            _rideMaxSpd = d.speed;
-            set('v-maxspd', _rideMaxSpd.toFixed(1));
-        }
-
-        // Durchschnitt
+        if (d.seconds > _rideSeconds) { _rideSeconds = d.seconds; set('v-time', fmtTime(_rideSeconds)); }
+        if (d.speed > _rideMaxSpd) { _rideMaxSpd = d.speed; set('v-maxspd', _rideMaxSpd.toFixed(1)); }
         if (d.speed > 0) {
             _rideSpeeds.push(d.speed);
-            const avg = _rideSpeeds.reduce((a,v) => a+v, 0) / _rideSpeeds.length;
-            set('v-avgspd', avg.toFixed(1));
+            set('v-avgspd', (_rideSpeeds.reduce((a,v) => a+v, 0) / _rideSpeeds.length).toFixed(1));
         }
+    }
+};
+
+// ── Cadence ───────────────────────────────────────────────────────────────────
+window.updateCadence = function(data) {
+    const d = typeof data === 'string' ? JSON.parse(data) : data;
+    const el = document.getElementById('v-cad');
+    if (el) el.textContent = d.cadence;
+
+    if (_rideState === 'running' && d.cadence > 0) {
+        _rideCadences.push(d.cadence);
+        // Durchschnitt sofort im Stats-Screen anzeigen
+        const avg = _rideCadences.reduce((a,v) => a+v, 0) / _rideCadences.length;
+        const avgEl = document.getElementById('v-avgcad');
+        if (avgEl) avgEl.textContent = avg.toFixed(0);
     }
 };
 
@@ -279,8 +272,7 @@ window.updateBle = function(data) {
     if (stxt) stxt.textContent = L.conn;
     const d = typeof data === 'string' ? JSON.parse(data) : data;
     if (d.soc != null) {
-        const soc   = Math.round(d.soc);
-        const color = soc < 20 ? '#E24B4A' : 'var(--accent)';
+        const soc = Math.round(d.soc), color = soc < 20 ? '#E24B4A' : 'var(--accent)';
         ['v-bat','v-bat2'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = soc; });
         const bbar = document.getElementById('bbar');
         if (bbar) { bbar.style.width = soc + '%'; bbar.style.background = color; }
@@ -297,7 +289,27 @@ window.onPermissionDenied = function() {
     if (el) el.textContent = LABELS[getLang()].noPermission;
 };
 
-// ── Verbinden ─────────────────────────────────────────────────────────────────
+// ── CSC Status ────────────────────────────────────────────────────────────────
+window.updateCscStatus = function(status) {
+    const L      = LABELS[getLang()];
+    const cscbtn = document.getElementById('cscbtn');
+    if (!cscbtn) return;
+    if (status === 'connected') {
+        cscbtn.dataset.status = 'connected';
+        cscbtn.textContent    = L.btnCscDisc;
+    } else if (status === 'timeout') {
+        cscbtn.dataset.status = 'disconnected';
+        cscbtn.textContent    = L.btnCscConn;
+        showToast(L.cscNotFound);
+    } else {
+        cscbtn.dataset.status = 'disconnected';
+        cscbtn.textContent    = L.btnCscConn;
+        const el = document.getElementById('v-cad');
+        if (el) el.textContent = '0';
+    }
+};
+
+// ── Verbinden ADD-E ───────────────────────────────────────────────────────────
 window.onBtnConnect = function() {
     const L    = LABELS[getLang()];
     const dbtn = document.getElementById('dbtn');
@@ -310,10 +322,52 @@ window.onBtnConnect = function() {
             dbtn.textContent    = L.btnConn;
             dot.className       = 'dot dis';
             stxt.textContent    = L.disc;
+        } else if (dbtn.dataset.status === 'scanning') {
+            showToast(getLang() === 'de' ? 'Suche läuft…' : 'Scanning…');
         } else {
+            showToast(L.btHint);
+            dbtn.dataset.status = 'scanning';
             NativeBridge.startBle();
             dot.className    = 'dot scan';
             stxt.textContent = L.scan;
+            setTimeout(() => {
+                if (dbtn.dataset.status !== 'connected') {
+                    dbtn.dataset.status = 'disconnected';
+                    dot.className       = 'dot dis';
+                    stxt.textContent    = L.disc;
+                    dbtn.textContent    = L.btnConn;
+                    showToast(getLang() === 'de' ? 'ADD-E nicht gefunden' : 'ADD-E not found');
+                }
+            }, 31000);
+        }
+    }
+};
+
+// ── Verbinden CSC ─────────────────────────────────────────────────────────────
+window.onBtnCscConnect = function() {
+    const L      = LABELS[getLang()];
+    const cscbtn = document.getElementById('cscbtn');
+    if (typeof NativeBridge !== 'undefined') {
+        if (cscbtn.dataset.status === 'connected') {
+            NativeBridge.stopCsc();
+            cscbtn.dataset.status = 'disconnected';
+            cscbtn.textContent    = L.btnCscConn;
+            const el = document.getElementById('v-cad');
+            if (el) el.textContent = '0';
+        } else if (cscbtn.dataset.status === 'scanning') {
+            showToast(getLang() === 'de' ? 'Suche läuft…' : 'Scanning…');
+        } else {
+            showToast(L.btHint);
+            cscbtn.dataset.status = 'scanning';
+            NativeBridge.startCsc();
+            cscbtn.textContent = L.scan;
+            setTimeout(() => {
+                if (cscbtn.dataset.status !== 'connected') {
+                    cscbtn.dataset.status = 'disconnected';
+                    cscbtn.textContent    = L.btnCscConn;
+                    showToast(L.cscNotFound);
+                }
+            }, 31000);
         }
     }
 };
@@ -330,7 +384,7 @@ window.showScr = function(name, btn) {
 
 // ── Fahrtimer ────────────────────────────────────────────────────────────────
 function startRideTimer() {
-    stopRideTimer();               // ← zuerst immer stoppen
+    if (window._rideTimer) return;
     window._rideTimer = setInterval(() => {
         if (_rideState !== 'running') return;
         _rideSeconds++;
@@ -357,10 +411,8 @@ function fmtDuration(s) {
 
 // ── Uhrzeit ───────────────────────────────────────────────────────────────────
 function updateClock() {
-    const n = new Date();
-    const el = document.getElementById('v-clock');
-    if (el) el.textContent =
-        String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+    const n = new Date(), el = document.getElementById('v-clock');
+    if (el) el.textContent = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
 }
 updateClock();
 setInterval(updateClock, 1000);
@@ -454,6 +506,7 @@ function runSimulation() {
                 id: d.getTime() + count, date: d.toISOString().slice(0,10),
                 startTime: String(hour).padStart(2,'0')+':'+String(min).padStart(2,'0'),
                 duration: durSec, distance: distKm, avgSpeed: avgSpd, maxSpeed: maxSpd,
+                avgCadence: rndInt(70, 95),   // simulierte Trittfrequenz
                 batteryStart: batStart, batteryEnd: bat
             });
             count++;
@@ -494,7 +547,8 @@ window.importCsvData = function(csvRaw) {
             avgSpeed:     toFloat(cols[4]),
             maxSpeed:     toFloat(cols[5]),
             batteryStart: cols[6] ? toInt(cols[6]) : null,
-            batteryEnd:   cols[7] ? toInt(cols[7]) : null
+            batteryEnd:   cols[7] ? toInt(cols[7]) : null,
+            avgCadence:   cols[8] ? toInt(cols[8]) : null
         };
         if (ride.date && ride.distance > 0) imported.push(ride);
     }
@@ -560,10 +614,7 @@ function updateHistNav() {
         ? ['So','Mo','Di','Mi','Do','Fr','Sa']
         : ['Su','Mo','Tu','We','Th','Fr','Sa'];
     if      (_histTab === 't') lbl.textContent = _histDate.toISOString().slice(0,10);
-    else if (_histTab === 'w') {
-        const mon = getMonday(_histDate);
-        lbl.textContent = days[mon.getDay()] + ', ' + mon.toISOString().slice(0,10);
-    }
+    else if (_histTab === 'w') { const mon = getMonday(_histDate); lbl.textContent = days[mon.getDay()] + ', ' + mon.toISOString().slice(0,10); }
     else if (_histTab === 'm') lbl.textContent = _histDate.toISOString().slice(0,7);
     else if (_histTab === 'j') lbl.textContent = String(_histDate.getFullYear());
 }
@@ -578,8 +629,7 @@ function renderHistContent() {
         filtered = rides.filter(r => r.date === _histDate.toISOString().slice(0,10));
         el.innerHTML = filtered.length === 0 ? emptyHtml(L) : filtered.map(r => rideCard(r, L)).join('');
     } else if (_histTab === 'w') {
-        const mon = getMonday(new Date(_histDate));
-        const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+        const mon = getMonday(new Date(_histDate)); const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
         filtered = rides.filter(r => r.date >= mon.toISOString().slice(0,10) && r.date <= sun.toISOString().slice(0,10));
         el.innerHTML = filtered.length === 0 ? emptyHtml(L) : aggCard(filtered, L) + filtered.map(r => rideCard(r, L)).join('');
     } else if (_histTab === 'm') {
@@ -603,6 +653,7 @@ function emptyHtml(L) {
 
 function rideCard(r, L) {
     const bat = (r.batteryStart != null && r.batteryEnd != null) ? `${r.batteryStart}%→${r.batteryEnd}%` : '--';
+    const cad = r.avgCadence ? `${r.avgCadence} rpm` : '--';
     return `<div class="hist-row">
       <div class="hist-row-hdr">
         <div class="hist-row-date">${r.date} ${r.startTime||''}</div>
@@ -613,6 +664,7 @@ function rideCard(r, L) {
         <div class="hist-stat"><b>${r.avgSpeed.toFixed(1)} km/h</b>${L.avgSpd}</div>
         <div class="hist-stat"><b>${r.maxSpeed.toFixed(1)} km/h</b>${L.maxSpd}</div>
         <div class="hist-stat"><b>${bat}</b>${L.battery}</div>
+        <div class="hist-stat"><b>${cad}</b>${L.avgCad}</div>
       </div></div>`;
 }
 
@@ -621,12 +673,15 @@ function aggCard(rides, L) {
     const totalSec = rides.reduce((s,r) => s + r.duration, 0);
     const avgSpd   = rides.reduce((s,r) => s + r.avgSpeed, 0) / rides.length;
     const maxSpd   = Math.max(...rides.map(r => r.maxSpeed));
+    const cadRides = rides.filter(r => r.avgCadence > 0);
+    const avgCad   = cadRides.length ? cadRides.reduce((s,r) => s + r.avgCadence, 0) / cadRides.length : 0;
     return `<div class="hist-agg" style="margin-bottom:10px;"><div class="hist-agg-grid">
         <div class="hist-agg-item"><div class="hist-agg-val">${rides.length}</div><div class="hist-agg-lbl">${L.rides}</div></div>
         <div class="hist-agg-item"><div class="hist-agg-val">${totalKm.toFixed(1)}</div><div class="hist-agg-lbl">${L.distance} km</div></div>
         <div class="hist-agg-item"><div class="hist-agg-val">${fmtDuration(totalSec)}</div><div class="hist-agg-lbl">${L.duration}</div></div>
         <div class="hist-agg-item"><div class="hist-agg-val">${avgSpd.toFixed(1)}</div><div class="hist-agg-lbl">${L.avgSpd} km/h</div></div>
-        <div class="hist-agg-item" style="grid-column:1/-1;"><div class="hist-agg-val">${maxSpd.toFixed(1)}</div><div class="hist-agg-lbl">${L.maxSpd} km/h</div></div>
+        <div class="hist-agg-item"><div class="hist-agg-val">${maxSpd.toFixed(1)}</div><div class="hist-agg-lbl">${L.maxSpd} km/h</div></div>
+        ${avgCad > 0 ? `<div class="hist-agg-item"><div class="hist-agg-val">${avgCad.toFixed(0)}</div><div class="hist-agg-lbl">${L.avgCad} rpm</div></div>` : ''}
     </div></div>`;
 }
 
@@ -651,8 +706,10 @@ window.histExport = function() {
     else if (_histTab === 'j') { const yr = String(_histDate.getFullYear()); filtered = rides.filter(r => r.date.slice(0,4) === yr); label = yr; }
     else { filtered = rides; label = 'Gesamt'; }
     if (!filtered.length) { window.showToast(L.noData); return; }
-    const csv = ['Datum,Uhrzeit,Distanz km,Fahrzeit s,Ø km/h,Max km/h,Akku Start%,Akku Ende%']
-        .concat(filtered.map(r => `${r.date},${r.startTime||''},${r.distance},${r.duration},${r.avgSpeed},${r.maxSpeed},${r.batteryStart||''},${r.batteryEnd||''}`)).join('\n');
+    const csv = ['Datum,Uhrzeit,Distanz km,Fahrzeit s,Ø km/h,Max km/h,Akku Start%,Akku Ende%,Ø rpm']
+        .concat(filtered.map(r =>
+            `${r.date},${r.startTime||''},${r.distance},${r.duration},${r.avgSpeed},${r.maxSpeed},${r.batteryStart||''},${r.batteryEnd||''},${r.avgCadence||''}`
+        )).join('\n');
     localStorage.setItem('adde_csv_export', csv);
     localStorage.setItem('adde_csv_label', label);
     window.showToast('Exportiere ' + filtered.length + ' Fahrten (' + label + ')...');

@@ -12,7 +12,7 @@ Die ADD-E Dashboard App zeigt Fahrtdaten Ihres ADD-E Nachrüstsystems in Echtzei
 |---|---|
 | GPS | Geschwindigkeit · Distanz · Fahrzeit |
 | BLE (Akku) | Ladezustand % · Spannung V · Strom A · Kapazität Ah |
-| Motorcontroller | Trittfrequenz rpm *(in Vorbereitung)* |
+| BLE (CSC-Sensor) | Trittfrequenz rpm · Ø Trittfrequenz |
 
 ---
 
@@ -24,13 +24,23 @@ Beim ersten Start fragt die App nach Berechtigungen für **Standort** und **Blue
 
 ### 2.2 BLE-Verbindung herstellen
 
+**ADD-E Akku:**
+
 1. ADD-E Akku einschalten
 2. Im Live-Screen auf „Verbinden" tippen
-3. Gerät „add-e P300-xxxx" auswählen
-4. Statusanzeige wechselt auf grün „Verbunden"
-5. Akkustand erscheint im Stats-Screen
+3. Statusanzeige wechselt auf grün „Verbunden"
+4. Akkustand erscheint im Stats-Screen
 
-> **Tipp:** Bei Verbindungsabbruch versucht die App automatisch 3× zu reconnecten.
+**CSC Cadence-Sensor (optional):**
+
+1. CSC-Sensor am Pedal befestigen und aktivieren
+2. Im Live-Screen auf „Cadence verbinden" tippen
+3. Sensor wird automatisch erkannt (Suche max. 30 Sek.)
+4. Button wechselt auf „Cadence trennen"
+5. Trittfrequenz erscheint im Live-Screen
+
+> **Tipp:** Bluetooth eingeschaltet? Die App zeigt einen Hinweis beim Verbindungsversuch.  
+> **Tipp:** Bei Verbindungsabbruch erneut auf „Verbinden" tippen — beim zweiten Versuch verbindet sich der Akku schneller.
 
 ---
 
@@ -44,7 +54,7 @@ Navigation über die Tab-Leiste am unteren Bildschirmrand: **▶ Live · ∑ Sta
 |---|---|---|
 | Geschwindigkeit | Aktuelle Fahrgeschwindigkeit in km/h | GPS |
 | Distanz | Zurückgelegte Strecke dieser Fahrt in km | GPS |
-| Trittfrequenz | Pedalumdrehungen pro Minute *(in Vorb.)* | BLE |
+| Trittfrequenz | Aktuelle Pedalumdrehungen pro Minute | BLE (CSC) |
 | Fahrzeit | Zeitdauer der aktuellen Fahrt | intern |
 
 **Fahrt-Steuerung:**
@@ -67,11 +77,14 @@ Navigation über die Tab-Leiste am unteren Bildschirmrand: **▶ Live · ∑ Sta
 | Ø Geschwindigkeit | Durchschnitt der aktuellen Fahrt | GPS |
 | Gesamtkilometer | Akkumulierte Distanz seit App-Start | GPS |
 | Geschw.-Maximum | Höchstgeschwindigkeit dieser Fahrt | GPS |
+| Ø Trittfrequenz | Durchschnittliche Trittfrequenz der Fahrt | BLE (CSC) |
 | Uhrzeit | Aktuelle Systemzeit | intern |
 | Akku % | Ladezustand mit Balkenanzeige | BLE |
 | Spannung | Akkuspannung in Volt | BLE |
 | Strom | Aktueller Stromfluss in Ampere | BLE |
 | Verbleibend | Verbleibende Kapazität in Ah | BLE |
+
+> Die Ø Trittfrequenz wird nur bei aktiver Fahrt (State: **läuft**) gesammelt — Pause-Zeiten und Stillstand werden ausgeschlossen.
 
 ### ≡ Verlauf-Screen
 
@@ -86,10 +99,10 @@ Zeigt gespeicherte Fahrten in fünf Zeiträumen an:
 | Gesamt | Alle gespeicherten Fahrten | Keine Navigation |
 
 **Angezeigte Werte pro Fahrt:**
-Datum · Uhrzeit · Distanz km · Fahrzeit · Ø Geschwindigkeit · Max. Geschwindigkeit · Akkustand Start→Ende
+Datum · Uhrzeit · Distanz km · Fahrzeit · Ø Geschwindigkeit · Max. Geschwindigkeit · Akkustand Start→Ende · Ø Trittfrequenz
 
 **Aggregierte Werte (W / M / J / Gesamt):**
-Anzahl Fahrten · Gesamtdistanz km · Gesamtfahrzeit · Ø Geschwindigkeit · Max. Geschwindigkeit
+Anzahl Fahrten · Gesamtdistanz km · Gesamtfahrzeit · Ø Geschwindigkeit · Max. Geschwindigkeit · Ø Trittfrequenz
 
 **Aktionszeile:**
 
@@ -138,6 +151,7 @@ Die exportierte CSV-Datei kann am PC bearbeitet und bereinigt werden.
 | Max km/h | Dezimalzahl mit Punkt | `31.2` |
 | Akku Start% | Ganzzahl | `97` |
 | Akku Ende% | Ganzzahl | `89` |
+| Ø rpm | Ganzzahl | `82` |
 
 ### 4.3 CSV-Import
 
@@ -185,9 +199,29 @@ Im Verlauf-Screen erscheint der Button **⚙ Testdaten erstellen** wenn noch kei
 |---|---|
 | GPS-Genauigkeit | GPS-Geschwindigkeit unter 2 km/h wird als 0 angezeigt (Rauschunterdrückung im Stand). |
 | Display aus | GPS und Fahrzeit laufen im Hintergrund weiter (Foreground Service). In der Statusleiste erscheint die aktuelle Geschwindigkeit und Distanz. |
-| BLE Reconnect | Bei Verbindungsabbruch versucht die App automatisch 3× mit steigender Wartezeit (1s, 2s, 3s) zu reconnecten. |
+| BLE Reconnect | Bei Verbindungsabbruch erneut auf „Verbinden" tippen — beim zweiten Versuch verbindet sich der Akku schneller (Android BLE-Cache). |
 | Akkuprotokoll | Das ADD-E Gerät sendet alle ~1 Sekunde: Spannung, Zellspannungen, Strom, Kapazität und Ladezustand. |
-| Trittfrequenz | Wird nach Erhalt der Protokolldokumentation vom Motorcontroller in einem späteren Update ergänzt. |
+| Trittfrequenz Stillstand | Bei Stillstand (keine Pedalumdrehungen) wird die Anzeige nach 3 Sekunden automatisch auf 0 gesetzt. |
+| CSC Scan-Timeout | Die Suche nach dem Cadence-Sensor läuft maximal 30 Sekunden. Bei Timeout erscheint „Kein Cadence-Sensor gefunden". |
+
+---
+
+## 8. Kompatibler Cadence-Sensor
+
+Die App unterstützt alle Bluetooth-Cadence-Sensoren die den **Bluetooth SIG CSC-Standard** (Cycling Speed and Cadence, Service UUID `0x1816`) verwenden.
+
+**Empfohlene Sensoren:**
+
+| Sensor | Preis | Hinweis |
+|---|---|---|
+| **CycPlus C3** | ~12 € | Günstig, CSC-konform |
+| **Magene S3+** | ~15 € | Bewährt, sehr zuverlässig |
+| **Wahoo RPM Cadence** | ~40 € | Premium, sehr stabil |
+| **Garmin Cadence Sensor 2** | ~40 € | CSC-konform |
+
+> ⚠️ Beim Kauf auf **„Bluetooth"** oder **„BLE"** achten — reine ANT+-Sensoren funktionieren nicht.
+
+**Montage:** Sensor am Kurbelarm befestigen — die App erkennt ihn automatisch beim Scan.
 
 ---
 

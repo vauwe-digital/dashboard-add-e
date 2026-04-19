@@ -40,7 +40,7 @@
       </div>
       <div class="card">
         <div class="clabel" id="l-cad">Trittfrequenz</div>
-        <div class="cval" id="v-cad">0.0</div>
+        <div class="cval" id="v-cad">0</div>
         <div class="cunit">rpm</div>
       </div>
       <div class="card">
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <!-- Start / Pause / Stop Buttons -->
+    <!-- Start / Pause / Stop -->
     <div class="ride-controls">
       <button class="ride-btn start" id="btn-start" onclick="rideStart()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -72,7 +72,13 @@
       </button>
     </div>
 
-    <button class="dbtn" id="dbtn" data-status="disconnected" onclick="onBtnConnect()">Verbinden</button>
+    <!-- Verbinden-Buttons -->
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="dbtn" id="dbtn" data-status="disconnected"
+              onclick="onBtnConnect()" style="flex:1;">Verbinden</button>
+      <button class="dbtn" id="cscbtn" data-status="disconnected"
+              onclick="onBtnCscConnect()" style="flex:1;">Cadence verbinden</button>
+    </div>
   </div>
 
   <!-- Screen 2: Stats -->
@@ -93,6 +99,14 @@
         <div class="cval sm" id="v-maxspd">0.0</div>
         <div class="cunit">km/h</div>
       </div>
+
+      <!-- NEU: Ø Trittfrequenz — gleich groß wie Geschw.-Maximum -->
+      <div class="card">
+        <div class="clabel" id="l-avgcad">Ø Trittfrequenz</div>
+        <div class="cval sm" id="v-avgcad">--</div>
+        <div class="cunit">rpm</div>
+      </div>
+
       <div class="card">
         <div class="clabel" id="l-clock">Uhrzeit</div>
         <div class="cval sm" id="v-clock">--:--</div>
@@ -128,7 +142,6 @@
 
   <!-- Screen 3: Verlauf -->
   <div id="scr-hist" style="display:none;">
-
     <div class="hist-tabs">
       <button class="htab on" id="ht-t" onclick="setHistTab('t',this)">T</button>
       <button class="htab"    id="ht-w" onclick="setHistTab('w',this)">W</button>
@@ -136,16 +149,13 @@
       <button class="htab"    id="ht-j" onclick="setHistTab('j',this)">J</button>
       <button class="htab gesamt" id="ht-g" onclick="setHistTab('g',this)">Gesamt</button>
     </div>
-
     <div class="hist-nav" id="hist-nav">
       <button class="hnav-btn" onclick="histNavPrev()">&#9664;</button>
       <div class="hnav-label" id="hnav-label">2026-04-12</div>
       <button class="hnav-btn" onclick="histNavNext()">&#9654;</button>
       <button class="hnav-today" onclick="histNavToday()" id="hnav-today">Heute</button>
     </div>
-
     <div id="hist-content"></div>
-
     <div class="hist-actions">
       <button class="hact-btn" onclick="histInfo()" title="Info">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

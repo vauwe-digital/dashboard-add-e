@@ -84,7 +84,6 @@ function applyLabels() {
     set('l-spd', L.spd); set('l-dist', L.dist); set('l-cad', L.cad); set('l-time', L.time);
     set('l-avgspd', L.avgspd); set('l-totalkm', L.totalkm); set('l-maxspd', L.maxspd);
     set('l-clock', L.clock); set('l-bat', L.bat); set('l-bat2', L.bat2);
-    set('l-avgcad', getLang() === 'de' ? 'Ø Trittfrequenz' : 'Avg Cadence');
     set('l-voltage', L.voltage); set('l-current', L.current); set('l-remaining', L.remaining);
     set('nb-live', L.live); set('nb-stats', L.stats); set('nb-hist', L.hist);
     set('hnav-today', L.today);
@@ -109,6 +108,7 @@ let _rideState    = 'idle';
 let _rideSeconds  = 0;
 let _rideDist     = 0.0;
 let _rideMaxSpd   = 0.0;
+let _rideAvgSpd   = 0.0;
 let _rideSpeeds   = [];
 let _rideCadences = [];
 let _rideStartBat = null;
@@ -142,6 +142,7 @@ window.rideStart = function() {
         _rideSeconds        = 0;
         _rideDist           = 0.0;
         _rideMaxSpd         = 0.0;
+        _rideAvgSpd         = 0.0;
         _rideSpeeds         = [];
         _rideCadences       = [];   // Cadence-Liste zurücksetzen
         _rideStartBat       = window._currentBat || null;
@@ -150,9 +151,6 @@ window.rideStart = function() {
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
         set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
-        // Im idle-Block ergänzen:
-        const avgcadEl = document.getElementById('v-avgcad');
-        if (avgcadEl) avgcadEl.textContent = '--';
     }
     _rideState = 'running';
     startRideTimer();
@@ -181,8 +179,10 @@ window.rideStop = function() {
         stopRideTimer();
         saveCurrentRide();
         _rideState = 'idle'; _rideSeconds = 0; _rideDist = 0.0;
-        _rideMaxSpd = 0.0; _rideSpeeds = []; _rideCadences = [];
+        _rideMaxSpd = 0.0; _rideAvgSpd = 0.0; _rideSpeeds = []; _rideCadences = [];
         window._lastSvcDist = null;
+        // TrackingService zurücksetzen
+        if (typeof NativeBridge !== 'undefined') NativeBridge.resetService();
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
         set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
@@ -196,8 +196,6 @@ window.rideStop = function() {
 
 function saveCurrentRide() {
     if (!_rideStartTime) return;
-    const avgSpd = _rideSpeeds.length
-        ? _rideSpeeds.reduce((a,v) => a+v, 0) / _rideSpeeds.length : 0;
     const avgCad = _rideCadences.length
         ? _rideCadences.reduce((a,v) => a+v, 0) / _rideCadences.length : 0;
     const ride = {
@@ -207,9 +205,9 @@ function saveCurrentRide() {
                       String(_rideStartTime.getMinutes()).padStart(2,'0'),
         duration:     _rideSeconds,
         distance:     parseFloat(_rideDist.toFixed(2)),
-        avgSpeed:     parseFloat(avgSpd.toFixed(1)),
+        avgSpeed:     parseFloat(_rideAvgSpd.toFixed(1)),   // aus Distanz/Zeit
         maxSpeed:     parseFloat(_rideMaxSpd.toFixed(1)),
-        avgCadence:   parseFloat(avgCad.toFixed(0)),   // Ø Trittfrequenz
+        avgCadence:   parseFloat(avgCad.toFixed(0)),
         batteryStart: _rideStartBat,
         batteryEnd:   window._currentBat || null
     };
@@ -237,11 +235,21 @@ window.updateFromService = function(data) {
         window._lastSvcDist = d.distance;
         _rideDist += delta;
         set('v-dist', _rideDist.toFixed(2));
-        if (d.seconds > _rideSeconds) { _rideSeconds = d.seconds; set('v-time', fmtTime(_rideSeconds)); }
-        if (d.speed > _rideMaxSpd) { _rideMaxSpd = d.speed; set('v-maxspd', _rideMaxSpd.toFixed(1)); }
-        if (d.speed > 0) {
-            _rideSpeeds.push(d.speed);
-            set('v-avgspd', (_rideSpeeds.reduce((a,v) => a+v, 0) / _rideSpeeds.length).toFixed(1));
+
+        if (d.seconds > _rideSeconds) {
+            _rideSeconds = d.seconds;
+            set('v-time', fmtTime(_rideSeconds));
+        }
+
+        if (d.speed > _rideMaxSpd) {
+            _rideMaxSpd = d.speed;
+            set('v-maxspd', _rideMaxSpd.toFixed(1));
+        }
+
+        // Ø Geschwindigkeit aus Distanz/Zeit — zuverlässig auch im Hintergrund
+        if (_rideSeconds > 0 && _rideDist > 0) {
+            _rideAvgSpd = (_rideDist / _rideSeconds) * 3600;
+            set('v-avgspd', _rideAvgSpd.toFixed(1));
         }
     }
 };
@@ -251,13 +259,9 @@ window.updateCadence = function(data) {
     const d = typeof data === 'string' ? JSON.parse(data) : data;
     const el = document.getElementById('v-cad');
     if (el) el.textContent = d.cadence;
-
+    // Nur während Fahrt und bei Bewegung sammeln — Pause wird ausgeschlossen
     if (_rideState === 'running' && d.cadence > 0) {
         _rideCadences.push(d.cadence);
-        // Durchschnitt sofort im Stats-Screen anzeigen
-        const avg = _rideCadences.reduce((a,v) => a+v, 0) / _rideCadences.length;
-        const avgEl = document.getElementById('v-avgcad');
-        if (avgEl) avgEl.textContent = avg.toFixed(0);
     }
 };
 

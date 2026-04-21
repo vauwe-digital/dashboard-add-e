@@ -178,6 +178,13 @@ class Bridge(private val context: MainActivity) {
     @JavascriptInterface fun getAppVersion(): String = BuildConfig.VERSION_NAME
 
     @JavascriptInterface
+    fun resetService() {
+        TrackingService.currentSeconds  = 0
+        TrackingService.currentDistance = 0.0
+        TrackingService.currentSpeed    = 0f
+    }
+
+    @JavascriptInterface
     fun importCsv() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*"; addCategory(Intent.CATEGORY_OPENABLE) }
         context.startActivityForResult(Intent.createChooser(intent, "CSV-Datei auswählen"), MainActivity.REQUEST_IMPORT_CSV)

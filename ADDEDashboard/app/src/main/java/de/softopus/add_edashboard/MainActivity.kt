@@ -179,6 +179,7 @@ class Bridge(private val context: MainActivity) {
 
     @JavascriptInterface
     fun resetService() {
+        TrackingService.resetRequested  = true
         TrackingService.currentSeconds  = 0
         TrackingService.currentDistance = 0.0
         TrackingService.currentSpeed    = 0f

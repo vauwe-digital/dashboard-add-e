@@ -175,23 +175,31 @@ window.rideStop = function() {
         updateRideUI();
         return;
     }
-    showDialog(L.stopTitle, L.stopText, L.stopOk, '#E24B4A', L.stopCancel, () => {
-        stopRideTimer();
-        saveCurrentRide();
-        _rideState = 'idle'; _rideSeconds = 0; _rideDist = 0.0;
-        _rideMaxSpd = 0.0; _rideAvgSpd = 0.0; _rideSpeeds = []; _rideCadences = [];
-        window._lastSvcDist = null;
-        // TrackingService zurücksetzen
-        if (typeof NativeBridge !== 'undefined') NativeBridge.resetService();
-        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-        set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
-        set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
-        const sl = document.getElementById('l-start');
-        if (sl) sl.textContent = L.start;
-        updateRideUI();
-        showToast('✓ ' + L.statusSaved);
-        renderHistContent();
-    });
+showDialog(L.stopTitle, L.stopText, L.stopOk, '#E24B4A', L.stopCancel, () => {
+    stopRideTimer();
+    saveCurrentRide();
+    _rideState = 'idle'; _rideSeconds = 0; _rideDist = 0.0;
+    _rideMaxSpd = 0.0; _rideAvgSpd = 0.0; _rideSpeeds = []; _rideCadences = [];
+    window._lastSvcDist = null;
+    if (typeof NativeBridge !== 'undefined') NativeBridge.resetService();
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
+    set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
+    const sl = document.getElementById('l-start');
+    if (sl) sl.textContent = L.start;
+    updateRideUI();
+    showToast('✓ ' + L.statusSaved);
+    renderHistContent();
+
+    // Sicherheitsnetz: nach 1.5s nochmals auf 0 setzen
+    setTimeout(() => {
+        if (_rideState === 'idle') {
+            set('v-time', '00:00');
+            set('v-dist', '0.00');
+            set('v-spd',  '0.0');
+        }
+    }, 1500);
+});
 };
 
 function saveCurrentRide() {

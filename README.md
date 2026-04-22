@@ -65,6 +65,7 @@ in this repository. Contact ADD-E GmbH for access.
 ## Noch ausstehend
 
 - Trittfrequenz (nach Erhalt der Motorcontroller-Dokumentation von ADD-E)
+- In der Zwischenzeit die Alternative: Bluetooth-Cadence-Sensoren die den Bluetooth SIG CSC-Standard (Cycling Speed and Cadence, Service UUID 0x1816) verwenden.
 - Fahrtdaten persistent speichern (Verlaufs-Screen mit echten Daten)
 - iOS-Version via Capacitor.js
 - NDA und offizielle BLE-Dokumentation von ADD-E

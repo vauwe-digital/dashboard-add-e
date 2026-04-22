@@ -3,6 +3,7 @@
 // Licensed under GNU General Public License v3.0
 // https://github.com/vauwe-digital/dashboard-add-e.git
 //
+
 package de.softopus.add_edashboard
 
 import android.app.Notification
@@ -38,10 +39,11 @@ class TrackingService : Service() {
     private var timerThread: Thread? = null
 
     companion object {
-        var currentSpeed    = 0f
-        var currentDistance = 0.0
-        var currentSeconds  = 0
-        var isRunning       = false
+        var currentSpeed      = 0f
+        var currentDistance   = 0.0
+        var currentSeconds    = 0
+        var isRunning         = false
+        var resetRequested    = false   // ← STOP-Button Reset
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -70,6 +72,20 @@ class TrackingService : Service() {
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(loc: Location) {
+            // Reset verarbeiten bevor neue Werte ankommen
+            if (resetRequested) {
+                totalKm         = 0.0
+                lastLat         = 0.0
+                lastLon         = 0.0
+                rideSeconds     = 0
+                currentSeconds  = 0
+                currentDistance = 0.0
+                currentSpeed    = 0f
+                resetRequested  = false
+                Log.d(TAG, "TrackingService zurückgesetzt")
+                return
+            }
+
             val speedKmh = loc.speed * 3.6f
             currentSpeed = if (speedKmh < 2f) 0f else speedKmh
 
@@ -80,31 +96,21 @@ class TrackingService : Service() {
             lastLat = loc.latitude
             lastLon = loc.longitude
 
-            // Benachrichtigung aktualisieren
             val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(NOTIF_ID, buildNotification())
         }
 
         @Deprecated("Deprecated in API 29")
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-
-        override fun onProviderEnabled(provider: String) {
-            Log.d(TAG, "Provider aktiviert: $provider")
-        }
-
-        override fun onProviderDisabled(provider: String) {
-            Log.w(TAG, "Provider deaktiviert: $provider")
-        }
+        override fun onProviderEnabled(provider: String)  { Log.d(TAG, "Provider aktiviert: $provider") }
+        override fun onProviderDisabled(provider: String) { Log.w(TAG, "Provider deaktiviert: $provider") }
     }
 
     private fun startGps() {
         try {
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
-                1000L,  // min. Zeit in ms
-                0f,     // min. Distanz in m
-                locationListener
-            )
+                1000L, 0f, locationListener)
             Log.d(TAG, "GPS gestartet")
         } catch (e: SecurityException) {
             Log.e(TAG, "GPS-Berechtigung fehlt: ${e.message}")
@@ -121,7 +127,11 @@ class TrackingService : Service() {
     private fun startTimer() {
         timerThread = Thread {
             while (!Thread.interrupted()) {
-                if (currentSpeed > 0f) {
+                if (resetRequested) {
+                    // Reset auch im Timer verarbeiten
+                    rideSeconds    = 0
+                    currentSeconds = 0
+                } else if (currentSpeed > 0f) {
                     rideSeconds++
                     currentSeconds = rideSeconds
                 }
@@ -141,11 +151,7 @@ class TrackingService : Service() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
-                NotificationChannel(
-                    CHANNEL_ID,
-                    "ADD-E Tracking",
-                    NotificationManager.IMPORTANCE_LOW
-                )
+                NotificationChannel(CHANNEL_ID, "ADD-E Tracking", NotificationManager.IMPORTANCE_LOW)
             )
         }
         val speed = "%.1f".format(java.util.Locale.US, currentSpeed)

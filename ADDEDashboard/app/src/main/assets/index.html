@@ -99,14 +99,6 @@
         <div class="cval sm" id="v-maxspd">0.0</div>
         <div class="cunit">km/h</div>
       </div>
-
-      <!-- NEU: Ø Trittfrequenz — gleich groß wie Geschw.-Maximum -->
-      <div class="card">
-        <div class="clabel" id="l-avgcad">Ø Trittfrequenz</div>
-        <div class="cval sm" id="v-avgcad">--</div>
-        <div class="cunit">rpm</div>
-      </div>
-
       <div class="card">
         <div class="clabel" id="l-clock">Uhrzeit</div>
         <div class="cval sm" id="v-clock">--:--</div>
@@ -137,6 +129,15 @@
         <div class="cval xs" id="v-remaining">--</div>
         <div class="cunit">Ah</div>
       </div>
+    </div>
+
+    <!-- Notiz-Eingabe -->
+    <div class="note-card">
+      <div class="note-label">✏ Notiz</div>
+      <textarea class="note-input" id="ride-note"
+                placeholder="z.B. Einkauf, Besuch, Wetter…"
+                rows="2"
+                oninput="saveNote()"></textarea>
     </div>
   </div>
 

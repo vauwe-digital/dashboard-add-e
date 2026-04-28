@@ -1,9 +1,3 @@
-// ADD-E Dashboard
-// Copyright (c) 2026 vauwe-digital / softopus
-// Licensed under GNU General Public License v3.0
-// https://github.com/vauwe-digital/dashboard-add-e.git
-
-
 // ── Texte DE / EN ────────────────────────────────────────────────────────────
 const LABELS = {
     de: {
@@ -38,7 +32,8 @@ const LABELS = {
         importText:'Die CSV-Datei wird mit vorhandenen Daten zusammengeführt. Duplikate werden übersprungen.',
         importOk:'Importieren', importCancel:'Abbrechen',
         btHint:'Bluetooth eingeschaltet?',
-        cscNotFound:'Kein Cadence-Sensor gefunden'
+        cscNotFound:'Kein Cadence-Sensor gefunden',
+        bleRetryHint:'BLE benötigt evtl. mehrere Versuche'
     },
     en: {
         spd:'Speed', dist:'Distance', cad:'Cadence', time:'Ride Time',
@@ -72,7 +67,8 @@ const LABELS = {
         importText:'The CSV file will be merged with existing data. Duplicates will be skipped.',
         importOk:'Import', importCancel:'Cancel',
         btHint:'Bluetooth turned on?',
-        cscNotFound:'No cadence sensor found'
+        cscNotFound:'No cadence sensor found',
+        bleRetryHint:'BLE may need several attempts'
     }
 };
 
@@ -144,10 +140,14 @@ window.rideStart = function() {
         _rideMaxSpd         = 0.0;
         _rideAvgSpd         = 0.0;
         _rideSpeeds         = [];
-        _rideCadences       = [];   // Cadence-Liste zurücksetzen
+        _rideCadences       = [];
         _rideStartBat       = window._currentBat || null;
         _rideStartTime      = new Date();
         window._lastSvcDist = null;
+        // Notiz-Feld leeren
+        const noteEl = document.getElementById('ride-note');
+        if (noteEl) noteEl.value = '';
+        localStorage.removeItem('adde_current_note');
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
         set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
@@ -175,37 +175,39 @@ window.rideStop = function() {
         updateRideUI();
         return;
     }
-showDialog(L.stopTitle, L.stopText, L.stopOk, '#E24B4A', L.stopCancel, () => {
-    stopRideTimer();
-    saveCurrentRide();
-    _rideState = 'idle'; _rideSeconds = 0; _rideDist = 0.0;
-    _rideMaxSpd = 0.0; _rideAvgSpd = 0.0; _rideSpeeds = []; _rideCadences = [];
-    window._lastSvcDist = null;
-    if (typeof NativeBridge !== 'undefined') NativeBridge.resetService();
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
-    set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
-    const sl = document.getElementById('l-start');
-    if (sl) sl.textContent = L.start;
-    updateRideUI();
-    showToast('✓ ' + L.statusSaved);
-    renderHistContent();
+    showDialog(L.stopTitle, L.stopText, L.stopOk, '#E24B4A', L.stopCancel, () => {
+        stopRideTimer();
+        saveCurrentRide();
+        _rideState = 'idle'; _rideSeconds = 0; _rideDist = 0.0;
+        _rideMaxSpd = 0.0; _rideAvgSpd = 0.0; _rideSpeeds = []; _rideCadences = [];
+        window._lastSvcDist = null;
+        if (typeof NativeBridge !== 'undefined') NativeBridge.resetService();
+        // TrackingService zurücksetzen
+        if (typeof NativeBridge !== 'undefined') NativeBridge.resetService();
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('v-spd', '0.0'); set('v-dist', '0.00'); set('v-time', '00:00');
+        set('v-maxspd', '0.0'); set('v-avgspd', '0.0'); set('v-cad', '0');
+        const sl = document.getElementById('l-start');
+        if (sl) sl.textContent = L.start;
+        updateRideUI();
+        showToast('✓ ' + L.statusSaved);
+        renderHistContent();
 
-    // Sicherheitsnetz: nach 1.5s nochmals auf 0 setzen
-    setTimeout(() => {
-        if (_rideState === 'idle') {
-            set('v-time', '00:00');
-            set('v-dist', '0.00');
-            set('v-spd',  '0.0');
-        }
-    }, 1500);
-});
+        // Sicherheitsnetz: nach 1.5s nochmals auf 0 setzen
+        setTimeout(() => {
+            if (_rideState === 'idle') {
+                const s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                s('v-time', '00:00'); s('v-dist', '0.00'); s('v-spd', '0.0');
+            }
+        }, 1500);
+    });
 };
 
 function saveCurrentRide() {
     if (!_rideStartTime) return;
     const avgCad = _rideCadences.length
         ? _rideCadences.reduce((a,v) => a+v, 0) / _rideCadences.length : 0;
+    const note = localStorage.getItem('adde_current_note') || '';
     const ride = {
         id:           _rideStartTime.getTime(),
         date:         _rideStartTime.toISOString().slice(0,10),
@@ -213,9 +215,10 @@ function saveCurrentRide() {
                       String(_rideStartTime.getMinutes()).padStart(2,'0'),
         duration:     _rideSeconds,
         distance:     parseFloat(_rideDist.toFixed(2)),
-        avgSpeed:     parseFloat(_rideAvgSpd.toFixed(1)),   // aus Distanz/Zeit
+        avgSpeed:     parseFloat(_rideAvgSpd.toFixed(1)),
         maxSpeed:     parseFloat(_rideMaxSpd.toFixed(1)),
         avgCadence:   parseFloat(avgCad.toFixed(0)),
+        note:         note.trim(),
         batteryStart: _rideStartBat,
         batteryEnd:   window._currentBat || null
     };
@@ -223,6 +226,7 @@ function saveCurrentRide() {
     rides.push(ride);
     rides.sort((a,b) => a.date.localeCompare(b.date));
     localStorage.setItem('adde_rides', JSON.stringify(rides));
+    localStorage.removeItem('adde_current_note');
 }
 
 // ── GPS ───────────────────────────────────────────────────────────────────────
@@ -279,6 +283,9 @@ window.updateBle = function(data) {
     const dbtn = document.getElementById('dbtn');
     const dot  = document.getElementById('dot');
     const stxt = document.getElementById('stxt');
+    // Animation stoppen sobald verbunden
+    if (dbtn) dbtn.classList.remove('scanning');
+    stopScanAnimation();
     if (dbtn) { dbtn.dataset.status = 'connected'; dbtn.textContent = L.btnDisc; }
     if (dot)  dot.className = 'dot';
     if (stxt) stxt.textContent = L.conn;
@@ -306,6 +313,7 @@ window.updateCscStatus = function(status) {
     const L      = LABELS[getLang()];
     const cscbtn = document.getElementById('cscbtn');
     if (!cscbtn) return;
+    cscbtn.classList.remove('scanning');
     if (status === 'connected') {
         cscbtn.dataset.status = 'connected';
         cscbtn.textContent    = L.btnCscDisc;
@@ -321,6 +329,31 @@ window.updateCscStatus = function(status) {
     }
 };
 
+// ── Scan-Animation ────────────────────────────────────────────────────────────
+let _scanDotTimer   = null;
+let _scanHintTimer  = null;
+
+function startScanAnimation(textElId) {
+    let dots = 0;
+    const el = document.getElementById(textElId);
+    _scanDotTimer = setInterval(() => {
+        dots = (dots + 1) % 4;
+        if (el) el.textContent = 'Suche' + '.'.repeat(dots);
+    }, 400);
+
+    // Nach 5 Sekunden Hinweis anzeigen: BLE benötigt evtl. mehrere Versuche
+    _scanHintTimer = setTimeout(() => {
+        showToast(LABELS[getLang()].bleRetryHint);
+    }, 5000);
+}
+
+function stopScanAnimation() {
+    clearInterval(_scanDotTimer);
+    clearTimeout(_scanHintTimer);
+    _scanDotTimer  = null;
+    _scanHintTimer = null;
+}
+
 // ── Verbinden ADD-E ───────────────────────────────────────────────────────────
 window.onBtnConnect = function() {
     const L    = LABELS[getLang()];
@@ -334,20 +367,26 @@ window.onBtnConnect = function() {
             dbtn.textContent    = L.btnConn;
             dot.className       = 'dot dis';
             stxt.textContent    = L.disc;
+            dbtn.classList.remove('scanning');
+            stopScanAnimation();
         } else if (dbtn.dataset.status === 'scanning') {
             showToast(getLang() === 'de' ? 'Suche läuft…' : 'Scanning…');
         } else {
             showToast(L.btHint);
             dbtn.dataset.status = 'scanning';
+            dbtn.classList.add('scanning');
             NativeBridge.startBle();
-            dot.className    = 'dot scan';
-            stxt.textContent = L.scan;
+            dot.className = 'dot scan';
+            startScanAnimation('stxt');
+
             setTimeout(() => {
                 if (dbtn.dataset.status !== 'connected') {
                     dbtn.dataset.status = 'disconnected';
-                    dot.className       = 'dot dis';
-                    stxt.textContent    = L.disc;
-                    dbtn.textContent    = L.btnConn;
+                    dbtn.classList.remove('scanning');
+                    stopScanAnimation();
+                    dot.className    = 'dot dis';
+                    stxt.textContent = L.disc;
+                    dbtn.textContent = L.btnConn;
                     showToast(getLang() === 'de' ? 'ADD-E nicht gefunden' : 'ADD-E not found');
                 }
             }, 31000);
@@ -364,6 +403,7 @@ window.onBtnCscConnect = function() {
             NativeBridge.stopCsc();
             cscbtn.dataset.status = 'disconnected';
             cscbtn.textContent    = L.btnCscConn;
+            cscbtn.classList.remove('scanning');
             const el = document.getElementById('v-cad');
             if (el) el.textContent = '0';
         } else if (cscbtn.dataset.status === 'scanning') {
@@ -371,11 +411,21 @@ window.onBtnCscConnect = function() {
         } else {
             showToast(L.btHint);
             cscbtn.dataset.status = 'scanning';
+            cscbtn.classList.add('scanning');
             NativeBridge.startCsc();
-            cscbtn.textContent = L.scan;
+            cscbtn.textContent = 'Suche...';
+
+            // Hinweis nach 5 Sekunden
+            setTimeout(() => {
+                if (cscbtn.dataset.status === 'scanning') {
+                    showToast(L.bleRetryHint);
+                }
+            }, 5000);
+
             setTimeout(() => {
                 if (cscbtn.dataset.status !== 'connected') {
                     cscbtn.dataset.status = 'disconnected';
+                    cscbtn.classList.remove('scanning');
                     cscbtn.textContent    = L.btnCscConn;
                     showToast(L.cscNotFound);
                 }
@@ -481,6 +531,12 @@ window.showToast = function(msg) {
     toast.textContent = msg;
     document.body.appendChild(toast);
     setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3000);
+};
+
+// ── Notiz ────────────────────────────────────────────────────────────────────
+window.saveNote = function() {
+    const el = document.getElementById('ride-note');
+    if (el) localStorage.setItem('adde_current_note', el.value);
 };
 
 // ── Fahrtdaten ────────────────────────────────────────────────────────────────
@@ -666,6 +722,9 @@ function emptyHtml(L) {
 function rideCard(r, L) {
     const bat = (r.batteryStart != null && r.batteryEnd != null) ? `${r.batteryStart}%→${r.batteryEnd}%` : '--';
     const cad = r.avgCadence ? `${r.avgCadence} rpm` : '--';
+    const noteHtml = r.note ? `<div style="margin-top:6px;font-size:11px;color:#888;
+        background:#FFFDE7;border-radius:6px;padding:4px 8px;">
+        ✏ ${r.note}</div>` : '';
     return `<div class="hist-row">
       <div class="hist-row-hdr">
         <div class="hist-row-date">${r.date} ${r.startTime||''}</div>
@@ -677,7 +736,9 @@ function rideCard(r, L) {
         <div class="hist-stat"><b>${r.maxSpeed.toFixed(1)} km/h</b>${L.maxSpd}</div>
         <div class="hist-stat"><b>${bat}</b>${L.battery}</div>
         <div class="hist-stat"><b>${cad}</b>${L.avgCad}</div>
-      </div></div>`;
+      </div>
+      ${noteHtml}
+    </div>`;
 }
 
 function aggCard(rides, L) {

@@ -57,7 +57,28 @@ body {
 
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transition: background .3s; }
 .dot.dis  { background: #E24B4A; }
-.dot.scan { background: #EF9F27; }
+.dot.scan {
+    background: #EF9F27;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%   { transform: scale(1);   opacity: 1; }
+    50%  { transform: scale(1.8); opacity: 0.5; }
+    100% { transform: scale(1);   opacity: 1; }
+}
+
+/* Button-Pulsieren während Scan */
+.dbtn.scanning {
+    animation: btnpulse 1.2s ease-in-out infinite;
+    opacity: 0.9;
+}
+
+@keyframes btnpulse {
+    0%   { box-shadow: 0 0 0 0 rgba(21,101,192,0.6); }
+    70%  { box-shadow: 0 0 0 10px rgba(21,101,192,0); }
+    100% { box-shadow: 0 0 0 0 rgba(21,101,192,0); }
+}
 
 .ctrl { display: flex; align-items: center; gap: 10px; }
 
@@ -109,9 +130,16 @@ body {
   color: #111111;
   line-height: 1;
 }
-.cval.hi { color: #085041; }
+.cval.hi { color: #085041; font-weight: 900; }
 .cval.sm { font-size: 34px; font-weight: 800; }
 .cval.xs { font-size: 24px; font-weight: 700; }
+
+/* Geschwindigkeit und Distanz extra fett */
+#v-spd, #v-dist {
+  font-size: 58px;
+  font-weight: 900;
+  -webkit-text-stroke: 1px currentColor;
+}
 
 .cunit {
   font-size: 13px;
@@ -204,9 +232,9 @@ body {
 .nbtn {
   flex: 1;
   min-width: 0;
-  padding: 13px 4px;
+  padding: 17px 4px;
   background: transparent; border: none;
-  cursor: pointer; font-size: 12px;
+  cursor: pointer; font-size: 13px;
   color: var(--accent-text);
   font-family: inherit;
   white-space: nowrap;
@@ -215,19 +243,20 @@ body {
   transition: background .2s, color .2s;
   opacity: .65;
 }
-.nbtn.on { background: var(--accent); color: #fff; opacity: 1; font-weight: 600; }
+.nbtn.on { background: var(--accent); color: #fff; opacity: 1; font-weight: 700; }
 
-/* ── Verbinden-Button ── */
+/* ── Verbinden-Buttons ── */
 .dbtn {
-  font-size: 13px; color: var(--accent-text);
-  background: var(--white);
-  border: 1px solid var(--accent-mid);
+  font-size: 13px; color: #fff;
+  background: #1565C0;
+  border: none;
   border-radius: var(--radius-md);
-  padding: 8px 20px; cursor: pointer;
+  padding: 10px 20px; cursor: pointer;
   display: block; margin: 4px auto 0;
   font-family: inherit;
   font-weight: 600;
 }
+.dbtn:active { background: #0D47A1; }
 
 /* ── Verlauf ── */
 .hist-tabs {
@@ -344,3 +373,31 @@ body {
   letter-spacing: .08em; text-transform: uppercase;
   margin-bottom: 11px; opacity: .7;
 }
+
+/* ── Notiz-Eingabe ── */
+.note-card {
+  background: #FFFDE7;
+  border: 1px solid #F9A825;
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.note-label {
+  font-size: 11px; font-weight: 600;
+  color: #F57F17;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.note-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: inherit;
+  color: #333;
+  outline: none;
+  resize: none;
+  min-height: 36px;
+}
+.note-input::placeholder { color: #bbb; }

@@ -240,8 +240,12 @@ window.updateGps = function(data) {
 window.updateFromService = function(data) {
     const d = typeof data === 'string' ? JSON.parse(data) : data;
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+    // Geschwindigkeit immer anzeigen
     set('v-spd', d.speed.toFixed(1));
-    if (_rideState === 'running') {
+
+    // Zeit/Distanz/Stats nur wenn Fahrt aktiv
+    if (_rideState !== 'running') return;
         if (window._lastSvcDist == null) window._lastSvcDist = d.distance;
         const delta = Math.max(0, d.distance - window._lastSvcDist);
         window._lastSvcDist = d.distance;
@@ -263,7 +267,6 @@ window.updateFromService = function(data) {
             _rideAvgSpd = (_rideDist / _rideSeconds) * 3600;
             set('v-avgspd', _rideAvgSpd.toFixed(1));
         }
-    }
 };
 
 // ── Cadence ───────────────────────────────────────────────────────────────────
@@ -327,6 +330,35 @@ window.updateCscStatus = function(status) {
         const el = document.getElementById('v-cad');
         if (el) el.textContent = '0';
     }
+};
+
+// ── Wake Lock (Display aktiv halten) ──────────────────────────────────────────
+window._wakeLockOn = false;
+
+window.toggleWakeLock = function() {
+    window._wakeLockOn = !window._wakeLockOn;
+    const btn = document.getElementById('wakelock-btn');
+    if (btn) {
+        if (window._wakeLockOn) {
+            // AN: groß, gelb, leuchtend
+            btn.style.opacity    = '1';
+            btn.style.filter     = 'none';
+            btn.style.textShadow = '0 0 8px #FFD600';
+            btn.title = getLang() === 'de' ? 'Display: aktiv' : 'Screen: on';
+        } else {
+            // AUS: gedimmt, grau
+            btn.style.opacity    = '0.35';
+            btn.style.filter     = 'grayscale(1)';
+            btn.style.textShadow = 'none';
+            btn.title = getLang() === 'de' ? 'Display: Ruhemodus' : 'Screen: sleep';
+        }
+    }
+    if (typeof NativeBridge !== 'undefined') {
+        NativeBridge.setWakeLock(window._wakeLockOn);
+    }
+    showToast(window._wakeLockOn
+        ? (getLang() === 'de' ? '☀ Display bleibt aktiv' : '☀ Screen stays on')
+        : (getLang() === 'de' ? '💤 Display: Ruhemodus'  : '💤 Screen: sleep mode'));
 };
 
 // ── Scan-Animation ────────────────────────────────────────────────────────────
@@ -616,7 +648,8 @@ window.importCsvData = function(csvRaw) {
             maxSpeed:     toFloat(cols[5]),
             batteryStart: cols[6] ? toInt(cols[6]) : null,
             batteryEnd:   cols[7] ? toInt(cols[7]) : null,
-            avgCadence:   cols[8] ? toInt(cols[8]) : null
+            avgCadence:   cols[8] ? toInt(cols[8]) : null,
+            note:         cols[9] ? cols[9].trim() : ''
         };
         if (ride.date && ride.distance > 0) imported.push(ride);
     }
@@ -779,9 +812,9 @@ window.histExport = function() {
     else if (_histTab === 'j') { const yr = String(_histDate.getFullYear()); filtered = rides.filter(r => r.date.slice(0,4) === yr); label = yr; }
     else { filtered = rides; label = 'Gesamt'; }
     if (!filtered.length) { window.showToast(L.noData); return; }
-    const csv = ['Datum,Uhrzeit,Distanz km,Fahrzeit s,Ø km/h,Max km/h,Akku Start%,Akku Ende%,Ø rpm']
+    const csv = ['Datum,Uhrzeit,Distanz km,Fahrzeit s,Ø km/h,Max km/h,Akku Start%,Akku Ende%,Ø rpm,Notiz']
         .concat(filtered.map(r =>
-            `${r.date},${r.startTime||''},${r.distance},${r.duration},${r.avgSpeed},${r.maxSpeed},${r.batteryStart||''},${r.batteryEnd||''},${r.avgCadence||''}`
+            `${r.date},${r.startTime||''},${r.distance},${r.duration},${r.avgSpeed},${r.maxSpeed},${r.batteryStart||''},${r.batteryEnd||''},${r.avgCadence||''},${(r.note||'').replace(/,/g, ';')}`
         )).join('\n');
     localStorage.setItem('adde_csv_export', csv);
     localStorage.setItem('adde_csv_label', label);

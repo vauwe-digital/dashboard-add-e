@@ -1,4 +1,4 @@
-# ADD-E Dashboard — Benutzeranleitung v1.0
+# ADD-E Dashboard — Benutzeranleitung v1.1
 
 **Android-App für das ADD-E Fahrrad-Nachrüstsystem · softopus · April 2026**
 
@@ -40,6 +40,7 @@ Beim ersten Start fragt die App nach Berechtigungen für **Standort** und **Blue
 5. Trittfrequenz erscheint im Live-Screen
 
 > **Tipp:** Bluetooth eingeschaltet? Die App zeigt einen Hinweis beim Verbindungsversuch.  
+> **Tipp:** Während der Suche pulsiert der Verbinden-Button blau und der Statustext animiert sich. Nach 5 Sekunden erscheint der Hinweis „BLE benötigt evtl. mehrere Versuche" — das ist normal.  
 > **Tipp:** Bei Verbindungsabbruch erneut auf „Verbinden" tippen — beim zweiten Versuch verbindet sich der Akku schneller.
 
 ---
@@ -86,6 +87,9 @@ Navigation über die Tab-Leiste am unteren Bildschirmrand: **▶ Live · ∑ Sta
 
 > Die Ø Trittfrequenz wird nur bei aktiver Fahrt (State: **läuft**) gesammelt — Pause-Zeiten und Stillstand werden ausgeschlossen.
 
+**Notiz-Feld:**
+Unter den BLE-Kacheln befindet sich ein gelbes Eingabefeld für eine kurze Notiz zur aktuellen Fahrt (z.B. `Einkauf`, `Besuch`, `Regen`). Die Notiz wird beim STOP automatisch mit der Fahrt gespeichert und erscheint gelb hervorgehoben im Verlauf.
+
 ### ≡ Verlauf-Screen
 
 Zeigt gespeicherte Fahrten in fünf Zeiträumen an:
@@ -99,7 +103,7 @@ Zeigt gespeicherte Fahrten in fünf Zeiträumen an:
 | Gesamt | Alle gespeicherten Fahrten | Keine Navigation |
 
 **Angezeigte Werte pro Fahrt:**
-Datum · Uhrzeit · Distanz km · Fahrzeit · Ø Geschwindigkeit · Max. Geschwindigkeit · Akkustand Start→Ende · Ø Trittfrequenz
+Datum · Uhrzeit · Distanz km · Fahrzeit · Ø Geschwindigkeit · Max. Geschwindigkeit · Akkustand Start→Ende · Ø Trittfrequenz · Notiz *(gelb, falls vorhanden)*
 
 **Aggregierte Werte (W / M / J / Gesamt):**
 Anzahl Fahrten · Gesamtdistanz km · Gesamtfahrzeit · Ø Geschwindigkeit · Max. Geschwindigkeit · Ø Trittfrequenz
@@ -152,6 +156,9 @@ Die exportierte CSV-Datei kann am PC bearbeitet und bereinigt werden.
 | Akku Start% | Ganzzahl | `97` |
 | Akku Ende% | Ganzzahl | `89` |
 | Ø rpm | Ganzzahl | `82` |
+| Notiz | Freitext | `Einkauf` |
+
+> Kommas in Notizen werden beim Export automatisch durch Semikolon ersetzt.
 
 ### 4.3 CSV-Import
 
@@ -183,6 +190,17 @@ Drei Farbvarianten über die Farbpunkte oben rechts wählbar. Die Auswahl wird g
 
 Über den Button **EN / DE** oben rechts zwischen Deutsch und Englisch wechseln. Alle Bezeichnungen, Statusmeldungen und Verlauf-Texte werden sofort umgestellt.
 
+### 5.3 Display aktiv halten (Wake Lock)
+
+Der **☀-Button** oben rechts neben den Farbpunkten steuert ob das Display in den Ruhemodus geht:
+
+| Zustand | Symbol | Verhalten |
+|---|---|---|
+| **Aus** (Standard) | ☀ grau gedimmt | Display geht normal in Ruhemodus |
+| **An** | ☀ leuchtend gelb | Display bleibt dauerhaft aktiv |
+
+> Nützlich während der Fahrt — verhindert dass das Display ausgeht wenn die App aktiv genutzt wird.
+
 ---
 
 ## 6. Testdaten
@@ -199,10 +217,12 @@ Im Verlauf-Screen erscheint der Button **⚙ Testdaten erstellen** wenn noch kei
 |---|---|
 | GPS-Genauigkeit | GPS-Geschwindigkeit unter 2 km/h wird als 0 angezeigt (Rauschunterdrückung im Stand). |
 | Display aus | GPS und Fahrzeit laufen im Hintergrund weiter (Foreground Service). In der Statusleiste erscheint die aktuelle Geschwindigkeit und Distanz. |
+| BLE Verbindung | Während der Suche pulsiert der Button blau und der Text animiert sich. Nach 5 Sek. Hinweis „BLE benötigt evtl. mehrere Versuche" — das ist ein bekanntes Android-Verhalten beim ersten Verbindungsaufbau. |
 | BLE Reconnect | Bei Verbindungsabbruch erneut auf „Verbinden" tippen — beim zweiten Versuch verbindet sich der Akku schneller (Android BLE-Cache). |
 | Akkuprotokoll | Das ADD-E Gerät sendet alle ~1 Sekunde: Spannung, Zellspannungen, Strom, Kapazität und Ladezustand. |
 | Trittfrequenz Stillstand | Bei Stillstand (keine Pedalumdrehungen) wird die Anzeige nach 3 Sekunden automatisch auf 0 gesetzt. |
 | CSC Scan-Timeout | Die Suche nach dem Cadence-Sensor läuft maximal 30 Sekunden. Bei Timeout erscheint „Kein Cadence-Sensor gefunden". |
+| Notiz | Die Notiz wird beim STOP mit der Fahrt gespeichert. Im CSV-Export erscheint sie in Spalte 10 und kann mit Notepad++ nachbearbeitet werden. |
 
 ---
 
@@ -225,4 +245,4 @@ Die App unterstützt alle Bluetooth-Cadence-Sensoren die den **Bluetooth SIG CSC
 
 ---
 
-*ADD-E Dashboard · softopus · de.softopus.add_edashboard · Version 1.0 · April 2026*
+*ADD-E Dashboard · softopus · de.softopus.add_edashboard · Version 1.1 · April 2026*

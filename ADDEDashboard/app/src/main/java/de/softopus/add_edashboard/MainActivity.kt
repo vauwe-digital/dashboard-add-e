@@ -1,9 +1,3 @@
-// ADD-E Dashboard
-// Copyright (c) 2026 vauwe-digital / softopus
-// Licensed under GNU General Public License v3.0
-// https://github.com/vauwe-digital/dashboard-add-e.git
-//
-
 package de.softopus.add_edashboard
 
 import android.Manifest
@@ -183,6 +177,20 @@ class Bridge(private val context: MainActivity) {
         TrackingService.currentSeconds  = 0
         TrackingService.currentDistance = 0.0
         TrackingService.currentSpeed    = 0f
+    }
+
+    @JavascriptInterface
+    fun setWakeLock(enable: Boolean) {
+        context.runOnUiThread {
+            if (enable) {
+                context.window.addFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                context.window.clearFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+            android.util.Log.d("MainActivity", "WakeLock: $enable")
+        }
     }
 
     @JavascriptInterface

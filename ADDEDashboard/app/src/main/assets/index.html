@@ -21,6 +21,14 @@
         <button class="tbtn"    data-theme="amber" style="background:#EF9F27;" onclick="setTheme('amber',this)"></button>
         <button class="tbtn"    data-theme="coral" style="background:#D85A30;" onclick="setTheme('coral',this)"></button>
       </div>
+      <!-- Wake Lock Toggle -->
+      <button id="wakelock-btn" onclick="toggleWakeLock()"
+              title="Display: Ruhemodus"
+              style="background:none;border:none;cursor:pointer;
+                     font-size:22px;padding:2px 4px;line-height:1;
+                     opacity:0.35;filter:grayscale(1);transition:all .3s;">
+        ☀
+      </button>
       <button class="lbtn" id="lbtn" onclick="toggleLang()">EN</button>
     </div>
   </div>
